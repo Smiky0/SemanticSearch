@@ -1,0 +1,31 @@
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/semantic_code"
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
+    qdrant_collection: str = "code_embeddings"
+
+    embedding_provider: str = "gemini"
+    embedding_model: str = "text-embedding-004"
+    embedding_dimensions: int = 768
+    ollama_embedding_model: str = "nomic-embed-text"
+
+    llm_provider: str = "gemini"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    openai_api_key: str = ""
+    ollama_url: str = "http://localhost:11434"
+    ollama_model: str = "gemma2:4b"
+
+    log_level: str = "INFO"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

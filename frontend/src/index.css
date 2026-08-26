@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-base: 247 247 245;
+    --bg-surface: 255 255 255;
+    --bg-elevated: 238 238 235;
+    --bg-highlight: 229 229 225;
+
+    --stroke: 217 217 212;
+
+    --text-primary: 17 17 17;
+    --text-secondary: 88 88 81;
+    --text-tertiary: 130 130 122;
+
+    --primary: 17 17 17;
+    --accent: 17 17 17;
+
+    --success: 63 166 107;
+    --warning: 217 154 36;
+    --danger: 224 82 82;
+  }
+
+  .dark {
+    --bg-base: 16 16 16;
+    --bg-surface: 23 23 23;
+    --bg-elevated: 32 32 32;
+    --bg-highlight: 41 41 41;
+
+    --stroke: 48 48 48;
+
+    --text-primary: 245 245 242;
+    --text-secondary: 166 166 158;
+    --text-tertiary: 110 110 102;
+
+    --primary: 245 245 242;
+    --accent: 199 255 61;
+
+    --success: 99 201 141;
+    --warning: 228 173 75;
+    --danger: 239 104 104;
+  }
+
+  body {
+    background: rgb(var(--bg-base));
+    color: rgb(var(--text-primary));
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  * {
+    border-color: rgb(var(--stroke));
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--text-tertiary));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--text-secondary));
+}
+
+/* One Dark code theme */
+.one-dark {
+  --od-bg: #282c34;
+  --od-fg: #abb2bf;
+  --od-comment: #5c6370;
+  --od-keyword: #c678dd;
+  --od-string: #98c379;
+  --od-function: #61afef;
+  --od-number: #d19a66;
+  --od-operator: #56b6c2;
+  --od-class: #e5c07b;
+  --od-variable: #e06c75;
+  --od-line-number: #495162;
+}
+
+pre code {
+  font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.one-dark pre {
+  background: var(--od-bg);
+  color: var(--od-fg);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.one-dark .code-line {
+  display: flex;
+  padding: 0 16px;
+}
+
+.one-dark .code-line:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.one-dark .line-number {
+  color: var(--od-line-number);
+  text-align: right;
+  min-width: 40px;
+  padding-right: 16px;
+  user-select: none;
+}
+
+.one-dark .code-content {
+  flex: 1;
+  white-space: pre;
+}
+
+/* Syntax token colors */
+.one-dark .tok-keyword { color: var(--od-keyword); }
+.one-dark .tok-string { color: var(--od-string); }
+.one-dark .tok-function { color: var(--od-function); }
+.one-dark .tok-number { color: var(--od-number); }
+.one-dark .tok-operator { color: var(--od-operator); }
+.one-dark .tok-class { color: var(--od-class); }
+.one-dark .tok-variable { color: var(--od-variable); }
+.one-dark .tok-comment { color: var(--od-comment); font-style: italic; }
+.one-dark .tok-decorator { color: var(--od-class); }
+.one-dark .tok-builtin { color: var(--od-function); }
+.one-dark .tok-param { color: var(--od-variable); }
+.one-dark .tok-self { color: var(--od-variable); font-style: italic; }
+.one-dark .tok-property { color: var(--od-variable); }
+.one-dark .tok-constant { color: var(--od-number); }
