@@ -51,6 +51,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/semantic_code
       QDRANT_URL: http://qdrant:6333
       QDRANT_API_KEY: ""
+    # Allow the container to reach services on the host machine
+    # (e.g. Ollama running on your machine). Use http://host.docker.internal:11434
+    # in the model config instead of http://localhost:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - backend_data:/app/data
     depends_on:
