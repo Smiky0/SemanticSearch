@@ -17,8 +17,8 @@ interface Props {
 }
 
 export function DirectoryBrowser({ onSelect, onClose }: Props) {
-  const [currentPath, setCurrentPath] = useState("/");
-  const [inputValue, setInputValue] = useState("/");
+  const [currentPath, setCurrentPath] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [parentPath, setParentPath] = useState<string | null>(null);
   const [entries, setEntries] = useState<
     { name: string; path: string; is_git: boolean }[]
@@ -27,7 +27,7 @@ export function DirectoryBrowser({ onSelect, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pathValid, setPathValid] = useState(true);
 
-  const navigate = useCallback(async (path: string) => {
+  const navigate = useCallback(async (path?: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -47,7 +47,7 @@ export function DirectoryBrowser({ onSelect, onClose }: Props) {
   }, []);
 
   useEffect(() => {
-    navigate(currentPath);
+    navigate();
   }, []);
 
   const handleBack = () => {

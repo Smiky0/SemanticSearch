@@ -56,8 +56,14 @@ services:
     # in the model config instead of http://localhost:11434
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Make host directories available to the backend so you can index them.
+    # Mount any folder you want to search (paths inside the container).
+    # In the directory browser, pick the path as it appears inside the container.
     volumes:
       - backend_data:/app/data
+      # Mount the host user directory as /host/users so the directory browser
+      # can browse and index your local folders. Add more mounts as needed.
+      - "${HOST_USER_DIR:-C:/Users/}:${HOST_MOUNT_PATH:-/host/users}"
     depends_on:
       postgres:
         condition: service_healthy

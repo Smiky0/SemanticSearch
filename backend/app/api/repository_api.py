@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
+from app.config import BROWSE_ROOT, get_settings
 from app.database import async_session, get_db
 from app.embedding.vector_store import get_vector_store
 from app.exceptions import RepositoryNotFoundError
@@ -32,7 +32,7 @@ class DirectoryEntry(BaseModel):
 
 
 @router.get("/repositories/browse")
-async def browse_directories(path: str = "/"):
+async def browse_directories(path: str = BROWSE_ROOT):
     try:
         target = Path(path).expanduser().resolve()
     except (RuntimeError, OSError):

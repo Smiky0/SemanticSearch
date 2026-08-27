@@ -23,12 +23,17 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "gemma2:4b"
 
+    browse_root: str = "/host/users"
+
     log_level: str = "INFO"
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+BROWSE_ROOT = get_settings().browse_root
 
 
 _active_llm_provider: str | None = None

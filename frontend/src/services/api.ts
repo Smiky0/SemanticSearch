@@ -131,12 +131,15 @@ export const api = {
     return data;
   },
 
-  browseDirectories: async (path: string) => {
+  browseDirectories: async (path?: string) => {
+    const query = path
+      ? `?path=${encodeURIComponent(path)}`
+      : "";
     const data = await request<{
       current: string;
       parent: string | null;
       entries: { name: string; path: string; is_git: boolean }[];
-    }>(`/repositories/browse?path=${encodeURIComponent(path)}`);
+    }>(`/repositories/browse${query}`);
     return data;
   },
 
