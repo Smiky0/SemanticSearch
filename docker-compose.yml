@@ -25,7 +25,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    profiles: ["full"]
 
   qdrant:
     image: qdrant/qdrant:v1.12.1
@@ -39,7 +38,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    profiles: ["full"]
 
   backend:
     build:
@@ -50,7 +48,6 @@ services:
     env_file:
       - .env
     environment:
-      # When using Docker Postgres/Qdrant (full profile):
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/semantic_code
       QDRANT_URL: http://qdrant:6333
       QDRANT_API_KEY: ""
