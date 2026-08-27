@@ -44,10 +44,10 @@ class RepositoryRepo:
         file_count: int | None = None,
         symbol_count: int | None = None,
         error_message: str | None = None,
-    ) -> None:
+    ) -> Repository | None:
         repo = await self.db.get(Repository, repo_id)
         if not repo:
-            return
+            return None
         repo.status = status
         if file_count is not None:
             repo.file_count = file_count
@@ -59,6 +59,8 @@ class RepositoryRepo:
             repo.indexed_at = datetime.now(UTC)
             repo.error_message = None
         await self.db.commit()
+        await self.db.refresh(repo)
+        return repo
 
     async def hard_delete(self, repo_id: uuid.UUID) -> None:
         repo = await self.db.get(Repository, repo_id)

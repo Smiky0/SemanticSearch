@@ -2,12 +2,14 @@ from pathlib import Path
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import async_session, get_db
 from app.embedding.vector_store import get_vector_store
 from app.exceptions import RepositoryNotFoundError
+from app.models.enums import IndexingStatus
 from app.repositories.edge_repo import EdgeRepo
 from app.repositories.node_repo import NodeRepo
 from app.repositories.repository_repo import RepositoryRepo
@@ -23,6 +25,46 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
+class DirectoryEntry(BaseModel):
+    name: str
+    path: str
+    is_git: bool
+
+
+@router.get("/repositories/browse")
+async def browse_directories(path: str = "/"):
+    try:
+        target = Path(path).expanduser().resolve()
+    except (RuntimeError, OSError):
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail=f"Path not found: {path}")
+    if not target.is_dir():
+        raise HTTPException(status_code=400, detail="Path is not a directory")
+
+    entries: list[DirectoryEntry] = []
+    try:
+        for item in sorted(target.iterdir()):
+            if item.name.startswith(".") and item.name != ".git":
+                continue
+            if not item.is_dir():
+                continue
+            is_git = (item / ".git").is_dir()
+            entries.append(
+                DirectoryEntry(
+                    name=item.name,
+                    path=str(item),
+                    is_git=is_git,
+                )
+            )
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    parent = str(target.parent) if target != target.parent else None
+    return {"current": str(target), "parent": parent, "entries": entries}
+
+
 @router.post("/repositories/index", response_model=RepositoryResponse)
 async def create_repository(
     req: RepositoryCreate,
@@ -35,8 +77,27 @@ async def create_repository(
 
     repo_repo = RepositoryRepo(db)
     existing = await repo_repo.get_by_path(str(repo_path))
+
     if existing:
-        raise HTTPException(status_code=409, detail="Repository already indexed")
+        if existing.status == "indexing":
+            raise HTTPException(
+                status_code=409, detail="Repository is currently being indexed"
+            )
+        if existing.status == "completed":
+            raise HTTPException(
+                status_code=409,
+                detail="Repository already indexed. Delete it first to re-index.",
+            )
+        repo = await repo_repo.update_status(
+            existing.id,
+            IndexingStatus.PENDING,
+            file_count=0,
+            symbol_count=0,
+            error_message=None,
+        )
+        background_tasks.add_task(index_repository, repo.id)
+        logger.info("repository_reindexed", repo_id=str(repo.id), path=str(repo_path))
+        return repo
 
     name = repo_path.name
     repo = await repo_repo.create(str(repo_path), name)

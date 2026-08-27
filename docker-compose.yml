@@ -1,3 +1,14 @@
+# Docker Compose for Semantic Code Search
+#
+# Two deployment modes:
+#
+# 1. FULL (default): All services run in Docker
+#    docker compose up -d
+#
+# 2. EXTERNAL: Use existing Postgres + Qdrant, only run app services
+#    docker compose --profile external up -d backend frontend
+#    Set DATABASE_URL, QDRANT_URL, QDRANT_API_KEY in .env
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -14,6 +25,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    profiles: ["full"]
 
   qdrant:
     image: qdrant/qdrant:v1.12.1
@@ -27,6 +39,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    profiles: ["full"]
 
   backend:
     build:
@@ -34,34 +47,38 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
+      # When using Docker Postgres/Qdrant (full profile):
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/semantic_code
       QDRANT_URL: http://qdrant:6333
-      QDRANT_API_KEY: ${QDRANT_API_KEY}
-      QDRANT_COLLECTION: code_embeddings
-      EMBEDDING_PROVIDER: gemini
-      EMBEDDING_MODEL: text-embedding-004
-      EMBEDDING_DIMENSIONS: "768"
-      LLM_PROVIDER: gemini
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
-      GEMINI_MODEL: gemini-2.5-flash
+      QDRANT_API_KEY: ""
+    volumes:
+      - backend_data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
       qdrant:
         condition: service_healthy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"
+      - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
 
 volumes:
   pgdata:
   qdrant_data:
+  backend_data:

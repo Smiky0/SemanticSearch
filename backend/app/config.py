@@ -29,3 +29,29 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+_active_llm_provider: str | None = None
+_active_embedding_provider: str | None = None
+
+
+def get_active_llm_provider() -> str:
+    if _active_llm_provider is not None:
+        return _active_llm_provider
+    return get_settings().llm_provider
+
+
+def set_active_llm_provider(provider: str) -> None:
+    global _active_llm_provider  # noqa: PLW0603
+    _active_llm_provider = provider.lower()
+
+
+def get_active_embedding_provider() -> str:
+    if _active_embedding_provider is not None:
+        return _active_embedding_provider
+    return get_settings().embedding_provider
+
+
+def set_active_embedding_provider(provider: str) -> None:
+    global _active_embedding_provider  # noqa: PLW0603
+    _active_embedding_provider = provider.lower()

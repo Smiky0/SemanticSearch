@@ -79,6 +79,22 @@ export const IndexingStatusResponseSchema = z.object({
   error_message: z.string().nullable(),
 });
 
+export const ModelConfigSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(["cloud", "local"]),
+  provider: z.enum(["gemini", "openai", "anthropic", "ollama", "custom"]),
+  api_key: z.string().optional().default(""),
+  base_url: z.string().optional().default(""),
+  llm_model: z.string().optional().default(""),
+  llm_max_tokens: z.number().optional().default(8192),
+  llm_temperature: z.number().optional().default(0.7),
+  embedding_model: z.string().optional().default(""),
+  embedding_dimensions: z.number().optional().default(768),
+  timeout: z.number().optional().default(120),
+  active: z.boolean().optional().default(false),
+});
+
 export type SymbolType = z.infer<typeof SymbolTypeEnum>;
 export type EdgeType = z.infer<typeof EdgeTypeEnum>;
 export type IndexingStatus = z.infer<typeof IndexingStatusEnum>;
@@ -91,3 +107,4 @@ export type GraphData = z.infer<typeof GraphDataSchema>;
 export type GraphNodeData = z.infer<typeof GraphNodeSchema>;
 export type GraphEdgeData = z.infer<typeof GraphEdgeSchema>;
 export type Relationship = z.infer<typeof RelationshipSchema>;
+export type ModelConfig = z.infer<typeof ModelConfigSchema>;

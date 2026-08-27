@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useStore } from "../store";
 import { api } from "../services/api";
-import { Search, Sparkles, GitBranch, Network, Loader2 } from "lucide-react";
+import { Search, Sparkles, Network, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
 
 export function SearchPanel() {
@@ -12,7 +12,10 @@ export function SearchPanel() {
     setGraphData,
     setActiveTab,
     setLoading,
+    setLoadingMode,
     setError,
+    setAIMode,
+    aiMode,
     loading,
   } = useStore();
 
@@ -20,30 +23,29 @@ export function SearchPanel() {
 
   const disabled = !selectedRepo || selectedRepo.status !== "completed";
 
-  const handleSearch = async (mode: "search" | "explain" | "trace") => {
+  const handleSearch = async () => {
     if (!query.trim() || disabled || loading) return;
 
     setLoading(true);
+    setLoadingMode(aiMode ? "explain" : "search");
     setSearchResults([]);
     setExplanation(null);
     setError(null);
 
     try {
-      if (mode === "search") {
-        const res = await api.search(selectedRepo!.id, query);
-        setSearchResults(res.results);
-      } else if (mode === "explain") {
+      if (aiMode) {
         const res = await api.explain(selectedRepo!.id, query);
         setExplanation(res);
-      } else if (mode === "trace") {
-        const res = await api.trace(selectedRepo!.id, query);
-        setExplanation(res);
+      } else {
+        const res = await api.search(selectedRepo!.id, query);
+        setSearchResults(res.results);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(message);
     } finally {
       setLoading(false);
+      setLoadingMode(null);
     }
   };
 
@@ -62,47 +64,63 @@ export function SearchPanel() {
 
   return (
     <div className="flex gap-2 items-center">
+      {/* AI mode toggle */}
+      <button
+        onClick={() => setAIMode(!aiMode)}
+        disabled={disabled}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all",
+          "bg-elevated hover:bg-highlight",
+          disabled && "opacity-40 cursor-not-allowed",
+        )}
+        title={aiMode ? "AI mode ON" : "AI mode OFF"}
+      >
+        <Sparkles className={cn("w-4 h-4", aiMode ? "text-accent animate-pulse" : "text-subtle")} />
+        <span className={cn("hidden sm:inline", aiMode ? "text-accent" : "text-muted")}>AI</span>
+        <div
+          className={cn(
+            "relative w-8 h-[18px] rounded-full transition-colors",
+            aiMode ? "bg-accent" : "bg-border",
+          )}
+        >
+          <div
+            className={cn(
+              "absolute top-[2px] w-[14px] h-[14px] rounded-full bg-background transition-all shadow-sm",
+              aiMode ? "left-[calc(100%-16px)]" : "left-[2px]",
+            )}
+          />
+        </div>
+      </button>
+
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch("search")}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           placeholder={
             disabled
               ? "Select a completed repository first"
-              : "Search code... e.g. 'Where is authentication implemented?'"
+              : aiMode
+                ? "Ask anything about your code..."
+                : "Search code... e.g. 'Where is authentication implemented?'"
           }
           className="w-full pl-9 pr-4 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-subtle"
           disabled={disabled}
         />
       </div>
       <button
-        onClick={() => handleSearch("search")}
+        onClick={handleSearch}
         disabled={disabled || !query.trim() || loading}
         className={cn(
           "px-4 py-2 text-sm font-medium rounded-lg transition-all",
-          "bg-primary text-background hover:opacity-90 disabled:opacity-40",
+          aiMode
+            ? "bg-accent text-background hover:opacity-90 disabled:opacity-40"
+            : "bg-primary text-background hover:opacity-90 disabled:opacity-40",
         )}
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
-      </button>
-      <button
-        onClick={() => handleSearch("explain")}
-        disabled={disabled || !query.trim() || loading}
-        className="px-4 py-2 text-sm font-medium rounded-lg bg-elevated text-foreground hover:bg-highlight disabled:opacity-40 transition-colors"
-      >
-        <Sparkles className="w-4 h-4 inline mr-1.5" />
-        Explain
-      </button>
-      <button
-        onClick={() => handleSearch("trace")}
-        disabled={disabled || !query.trim() || loading}
-        className="px-4 py-2 text-sm font-medium rounded-lg bg-elevated text-foreground hover:bg-highlight disabled:opacity-40 transition-colors"
-      >
-        <GitBranch className="w-4 h-4 inline mr-1.5" />
-        Trace
       </button>
       <button
         onClick={handleGraph}

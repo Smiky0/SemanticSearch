@@ -1,0 +1,17 @@
+[
+  {
+    "id": "cf130d4b-8a59-42a7-b783-65a76ee12f20",
+    "name": "Qwen2.5 Coder",
+    "type": "local",
+    "provider": "ollama",
+    "api_key": "",
+    "base_url": "http://localhost:11434",
+    "llm_model": "qwen2.5-coder:3b",
+    "llm_max_tokens": 8192,
+    "llm_temperature": 0.7,
+    "embedding_model": "nomic-embed-text",
+    "embedding_dimensions": 768,
+    "timeout": 120,
+    "active": true
+  }
+]

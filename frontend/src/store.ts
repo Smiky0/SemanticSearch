@@ -1,6 +1,16 @@
 import { create } from "zustand";
 import type { Repository, SearchResult, LLMResponse, GraphData, NodeInfo } from "./schemas";
 
+export interface ProviderInfo {
+  id: string;
+  label: string;
+  type: string;
+  model: string;
+  available: boolean;
+  error: string | null;
+  ollama_models?: string[];
+}
+
 interface AppState {
   repositories: Repository[];
   selectedRepo: Repository | null;
@@ -9,9 +19,13 @@ interface AppState {
   explanation: LLMResponse | null;
   graphData: GraphData | null;
   loading: boolean;
+  loadingMode: "search" | "explain" | "trace" | null;
   activeTab: "search" | "graph";
+  aiMode: boolean;
+  providers: ProviderInfo[];
   error: string | null;
   theme: "light" | "dark";
+  llmProvider: string;
 
   setRepositories: (repos: Repository[]) => void;
   addRepository: (repo: Repository) => void;
@@ -23,9 +37,13 @@ interface AppState {
   setExplanation: (explanation: LLMResponse | null) => void;
   setGraphData: (data: GraphData | null) => void;
   setLoading: (loading: boolean) => void;
+  setLoadingMode: (mode: "search" | "explain" | "trace" | null) => void;
+  setAIMode: (aiMode: boolean) => void;
   setActiveTab: (tab: "search" | "graph") => void;
   setError: (error: string | null) => void;
   setTheme: (theme: "light" | "dark") => void;
+  setLlmProvider: (provider: string) => void;
+  setProviders: (providers: ProviderInfo[]) => void;
   clearSelection: () => void;
 }
 
@@ -37,9 +55,13 @@ export const useStore = create<AppState>((set) => ({
   explanation: null,
   graphData: null,
   loading: false,
+  loadingMode: null,
+  aiMode: false,
   activeTab: "search",
   error: null,
   theme: (localStorage.getItem("theme") as "light" | "dark") || "dark",
+  llmProvider: localStorage.getItem("llmProvider") || "gemini",
+  providers: [],
 
   setRepositories: (repositories) => set({ repositories }),
   addRepository: (repo) =>
@@ -71,6 +93,8 @@ export const useStore = create<AppState>((set) => ({
   setExplanation: (explanation) => set({ explanation }),
   setGraphData: (graphData) => set({ graphData }),
   setLoading: (loading) => set({ loading }),
+  setLoadingMode: (loadingMode) => set({ loadingMode }),
+  setAIMode: (aiMode) => set({ aiMode }),
   setActiveTab: (activeTab) => set({ activeTab }),
   setError: (error) => set({ error }),
   setTheme: (theme) => {
@@ -78,6 +102,11 @@ export const useStore = create<AppState>((set) => ({
     document.documentElement.classList.toggle("dark", theme === "dark");
     set({ theme });
   },
+  setLlmProvider: (llmProvider) => {
+    localStorage.setItem("llmProvider", llmProvider);
+    set({ llmProvider });
+  },
+  setProviders: (providers) => set({ providers }),
   clearSelection: () =>
     set({
       selectedNode: null,

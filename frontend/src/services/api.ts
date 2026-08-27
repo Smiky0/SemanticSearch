@@ -7,6 +7,7 @@ import {
   NodeInfoSchema,
   RelationshipSchema,
   type SymbolType,
+  type ModelConfig,
 } from "../schemas";
 
 const BASE = "/api";
@@ -111,5 +112,87 @@ export const api = {
   getGraph: async (repoId: string) => {
     const data = await request<unknown>(`/graph/${repoId}`);
     return parse(GraphDataSchema, data);
+  },
+
+  getLlmProvider: async () => {
+    const data = await request<{
+      active_llm: string;
+      active_embedding: string;
+      providers: {
+        id: string;
+        label: string;
+        type: string;
+        model: string;
+        available: boolean;
+        error: string | null;
+        ollama_models?: string[];
+      }[];
+    }>("/config/providers");
+    return data;
+  },
+
+  browseDirectories: async (path: string) => {
+    const data = await request<{
+      current: string;
+      parent: string | null;
+      entries: { name: string; path: string; is_git: boolean }[];
+    }>(`/repositories/browse?path=${encodeURIComponent(path)}`);
+    return data;
+  },
+
+  // Model management
+  listModels: async () => {
+    const data = await request<{ models: ModelConfig[] }>("/models");
+    return data.models;
+  },
+
+  createModel: async (config: Partial<ModelConfig>) => {
+    const data = await request<ModelConfig>("/models", {
+      method: "POST",
+      body: JSON.stringify(config),
+    });
+    return data;
+  },
+
+  updateModel: async (modelId: string, updates: Partial<ModelConfig>) => {
+    const data = await request<ModelConfig>(`/models/${modelId}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+    return data;
+  },
+
+  deleteModel: async (modelId: string) => {
+    const data = await request<{ status: string }>(`/models/${modelId}`, {
+      method: "DELETE",
+    });
+    return data;
+  },
+
+  activateModel: async (modelId: string) => {
+    const data = await request<ModelConfig>(`/models/${modelId}/activate`, {
+      method: "POST",
+    });
+    return data;
+  },
+
+  checkModelHealth: async (modelId: string) => {
+    const data = await request<{
+      available: boolean;
+      models?: string[];
+      error?: string;
+    }>(`/models/${modelId}/health`);
+    return data;
+  },
+
+  setLlmProvider: async (provider: string) => {
+    const data = await request<{ active_llm: string; active_embedding: string }>(
+      "/config/providers",
+      {
+        method: "PUT",
+        body: JSON.stringify({ provider }),
+      },
+    );
+    return data;
   },
 };
