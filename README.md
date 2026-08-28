@@ -175,6 +175,28 @@ uv run alembic revision --autogenerate -m "description"
 uv run alembic upgrade head
 ```
 
+## Testing
+
+Backend uses `pytest`; frontend uses `vitest`. Tests run automatically in CI on every push/PR (see `.github/workflows/ci.yml`).
+
+```bash
+# Backend unit tests (no DB/Qdrant needed)
+cd backend
+uv sync --group dev   # ensure dev/test deps installed
+pytest -v             # or: python -m pytest tests
+
+# Backend lint
+uv run ruff check .
+
+# Frontend tests + typecheck
+cd frontend
+pnpm install
+pnpm test            # vitest run
+pnpm exec tsc --noEmit
+```
+
+The backend suite covers the pure-logic layer — tree-sitter parsing, file scanning, relationship extraction, the model store, config/active-provider switching, and enums/exceptions — and runs entirely offline without external services.
+
 ## Key Decisions
 
 - **tree-sitter 0.21.3** pinned for compatibility with tree-sitter-languages. Newer versions break the wrapper.

@@ -1,7 +1,7 @@
 import enum
 
 
-class SymbolType(str, enum.Enum):
+class SymbolType(enum.StrEnum):
     FILE = "file"
     MODULE = "module"
     CLASS = "class"
@@ -9,7 +9,7 @@ class SymbolType(str, enum.Enum):
     METHOD = "method"
 
 
-class EdgeType(str, enum.Enum):
+class EdgeType(enum.StrEnum):
     IMPORTS = "imports"
     CALLS = "calls"
     DEFINES = "defines"
@@ -18,7 +18,7 @@ class EdgeType(str, enum.Enum):
     INHERITS = "inherits"
 
 
-class IndexingStatus(str, enum.Enum):
+class IndexingStatus(enum.StrEnum):
     PENDING = "pending"
     INDEXING = "indexing"
     COMPLETED = "completed"

@@ -69,10 +69,12 @@ def _extract_python(tree: tree_sitter.Tree, lines: list[str]) -> list[CodeUnit]:
             end_line = node.end_point[0]
             source = _get_source(lines, start_line, end_line)
             docstring = _extract_python_docstring(node)
+            # A function defined inside a class body is a method.
+            symbol_type = SymbolType.METHOD if parent else SymbolType.FUNCTION
             units.append(
                 CodeUnit(
                     symbol_name=name,
-                    symbol_type=SymbolType.FUNCTION,
+                    symbol_type=symbol_type,
                     start_line=start_line + 1,
                     end_line=end_line + 1,
                     source_code=source,
@@ -109,6 +111,10 @@ def _extract_python(tree: tree_sitter.Tree, lines: list[str]) -> list[CodeUnit]:
                 "class_definition",
             ):
                 _extract_node(child, parent=parent)
+            elif child.type == "block":
+                # Nested definitions (e.g. methods inside a class body) live
+                # under a "block" node rather than as direct children.
+                _walk_children(child, parent=parent)
 
     _walk_children(root)
 
@@ -189,6 +195,24 @@ def _extract_js_ts(tree: tree_sitter.Tree, lines: list[str]) -> list[CodeUnit]:
                 )
             )
 
+        elif node_type == "method_signature":
+            name = _get_name(node)
+            if not name:
+                return
+            start_line = node.start_point[0]
+            end_line = node.end_point[0]
+            source = _get_source(lines, start_line, end_line)
+            units.append(
+                CodeUnit(
+                    symbol_name=name,
+                    symbol_type=SymbolType.METHOD,
+                    start_line=start_line + 1,
+                    end_line=end_line + 1,
+                    source_code=source,
+                    parent_symbol=parent,
+                )
+            )
+
         for child in node.children:
             _extract_node(child, parent=parent)
 
@@ -196,11 +220,12 @@ def _extract_js_ts(tree: tree_sitter.Tree, lines: list[str]) -> list[CodeUnit]:
     return units
 
 
+_NAME_NODE_TYPES = ("identifier", "field_identifier", "property_identifier", "type_identifier")
+
+
 def _get_name(node: tree_sitter.Node) -> str | None:
     for child in node.children:
-        if child.type == "identifier":
-            return _node_text(child)
-        if child.type == "field_identifier":
+        if child.type in _NAME_NODE_TYPES:
             return _node_text(child)
     return None
 
