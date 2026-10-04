@@ -54,3 +54,6 @@ frontend/build/
 
 # Docker
 docker-compose.override.yml
+
+# Docs
+Docs/*.png

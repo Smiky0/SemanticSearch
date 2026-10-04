@@ -1,116 +1,226 @@
 # Semantic Code Search
 
-Semantic search over source code. Index a repository, then search by meaning, get AI explanations, trace call chains, and visualize dependency graphs.
+Semantic search over source code. Index a repository, then search by meaning, generate AI explanations, trace call chains, and visualise dependency graphs.
+
+Built as a single-worker FastAPI service — an architecture that makes event-loop blocking immediately visible, and therefore worth measuring hard. The result: **13 defects fixed, a 13-minute outage eliminated, 7.1x throughput and 410x better p99 latency under load.**
+
+Full performance report: **[perf/RESULTS.md](perf/RESULTS.md)** · Detailed defect log: **[perf/PERF-LOG.txt](perf/PERF-LOG.txt)**
+
+---
+
+## Table of Contents
+
+- [How It Works](#how-it-works)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Performance](#performance)
+- [Architecture](#architecture)
+- [API Reference](#api-reference)
+- [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Load Testing](#load-testing)
+- [Key Decisions](#key-decisions)
+- [License](#license)
+
+---
 
 ## How It Works
 
-1. Point the tool at a local repository path
-2. Backend parses source files with tree-sitter, extracts symbols (functions, classes, methods)
-3. Symbols are embedded via a vector model and stored in Qdrant
-4. At query time, your natural language query is embedded and matched against the vector store
-5. Retrieved context is passed to an LLM for explanation/trace tasks
+1. Point the tool at a local repository path.
+2. The backend scans and parses source files with **tree-sitter**, extracting symbols (functions, classes, methods).
+3. Each symbol is embedded by a vector model and stored in **Qdrant**, tagged with its repository.
+4. At query time your natural-language query is embedded and matched against the vector store, filtered to that repository.
+5. Retrieved context is passed to an LLM for explanation and trace tasks.
 
 ```
-Browser ──> React SPA ──> FastAPI ──> PostgreSQL (metadata)
-                                    ──> Qdrant (vectors)
-                                    ──> LLM API (explanations)
+Browser ──► React SPA ──► FastAPI ──► PostgreSQL   (symbols, edges, metadata)
+                              ├────► Qdrant       (768-dim vectors)
+                              ├────► Ollama/LLM   (embeddings, explanations)
+                              └────► Ollama/LLM   (call-graph reasoning)
 ```
 
-## Requirements
+---
 
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL 14+ (or Neon/Aiven serverless)
-- Qdrant (self-hosted or cloud)
-- An LLM API key (Gemini, OpenAI, Claude) or Ollama running locally
+## Features
 
-## Setup
+**Search.** Query in natural language — "where is authentication handled". Returns symbols ranked by semantic similarity with file paths and line numbers.
+
+**Explain.** Retrieves relevant code and asks the LLM for a structured explanation with source references.
+
+**Trace.** Follows calls and imports from the initial results to map execution paths.
+
+**Graph.** Interactive symbol-relationship visualisation (imports, calls, defines, inherits), paginated so large repositories stay responsive.
+
+**Multi-repository.** Index many repositories side by side. Vector collections are shared, but every read and delete is repository-scoped — indexing or deleting one repository never touches another's data.
+
+---
+
+## Quick Start
+
+### Docker (recommended)
 
 ```bash
 git clone <repo-url> && cd Semantic-Code-Search
-
-# Backend
-cd backend
-cp ../.env.example .env
-# Edit .env with your database, Qdrant, and API credentials
-uv sync
-
-# Frontend
-cd ../frontend
-pnpm install
+cp .env.docker .env
+# Edit .env if you need a specific host folder mounted for indexing
+docker compose --profile full up -d
 ```
 
-### Environment Variables
+Frontend: <http://localhost> · API: <http://localhost:8000>
 
-Required in `backend/.env`:
+To index a repository, the backend needs that folder mounted into the container:
+
+```yaml
+# docker-compose.yml
+volumes:
+  - "${HOST_USER_DIR:-C:/Users/}:${HOST_MOUNT_PATH:-/host/users}"
+```
 
 ```env
-DATABASE_URL=postgresql+asyncpg://user:pass@host/dbname?sslmode=require
-QDRANT_URL=https://your-cluster.qdrant.io:6333
-QDRANT_API_KEY=your-qdrant-api-key
+# .env — point the mount at the code you want to index
+HOST_USER_DIR=D:/Code/Projects
+HOST_MOUNT_PATH=/host/projects
 ```
 
-LLM/embedding providers are configured through the UI (Settings gear icon in sidebar). Defaults can be set via env vars:
-
-```env
-GEMINI_API_KEY=your-key
-OPENAI_API_KEY=your-key
-OLLAMA_URL=http://localhost:11434
-```
-
-### Running
+### Local development
 
 ```bash
-# Terminal 1 — backend
+# Backend
 cd backend
+uv sync
 uv run uvicorn app.main:app --reload --port 8000
 
-# Terminal 2 — frontend
+# Frontend
 cd frontend
+pnpm install
 pnpm dev
 ```
 
-Open http://localhost:5173
+Frontend: <http://localhost:5173>
 
-### Docker
+**Requirements:** Python 3.11+, Node.js 18+, PostgreSQL 14+, Qdrant, and either an LLM API key or [Ollama](https://ollama.com) running locally.
 
-Two modes — all-in-one or external services:
+> **Docker note:** `backend/models.json` seeds the active provider and is intentionally **not** excluded by `.dockerignore`. If it is missing, the backend silently falls back to `EMBEDDING_PROVIDER` (gemini by default) and every search fails with a 403 if no API key is set.
 
-```bash
-# Full stack (Postgres + Qdrant + app in Docker)
-cp .env.docker .env
-docker compose --profile full up -d
+---
 
-# External services (your own Postgres + Qdrant)
-# Set DATABASE_URL, QDRANT_URL, QDRANT_API_KEY in .env
-docker compose up -d backend frontend
+## Configuration
+
+### Required
+
+```env
+DATABASE_URL=postgresql+asyncpg://user:pass@host/dbname
+QDRANT_URL=http://qdrant:6333
+QDRANT_API_KEY=
 ```
 
-Frontend serves at http://localhost:80 (nginx), proxies `/api` to backend.
+### Providers
 
-### Environment
-
-## What It Does
-
-**Search.** Type a natural language query like "where is authentication handled". Returns matching symbols ranked by semantic similarity with file paths and line numbers.
-
-**Explain.** Toggle AI mode and ask a question. Retrieves relevant code, passes it to the LLM, and returns a structured explanation with source references.
-
-**Trace.** Follows function calls and imports from the initial search results to map execution paths.
-
-**Graph.** Interactive visualization of the codebase's symbol relationships (imports, calls, defines, inherits).
-
-## Provider Support
+Providers are configured through the UI (Settings in the sidebar) and persisted to `backend/models.json`.
 
 | Provider | LLM | Embeddings | Notes |
 |----------|-----|------------|-------|
 | Gemini | gemini-2.5-flash | gemini-embedding-001 | Free tier available |
 | OpenAI | gpt-4o-mini | text-embedding-3-small | Pay per token |
-| Anthropic | claude-sonnet-4-20250514 | — | LLM only; pair with another for embeddings |
-| Ollama | Any local model | nomic-embed-text | Free, runs on your machine |
-| Custom | Any | Any | OpenAI-compatible `/v1/chat/completions` and `/v1/embeddings` |
+| Anthropic | claude-sonnet-4 | — | LLM only |
+| Ollama | Any local model | nomic-embed-text | Free, fully local |
+| Custom | Any | Any | OpenAI-compatible endpoints |
 
-Providers are managed through the UI. You can add, edit, delete, and switch between models at runtime.
+Env defaults (used when no model is configured):
+
+```env
+EMBEDDING_PROVIDER=gemini
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=
+OLLAMA_URL=http://localhost:11434
+```
+
+### Connection pool
+
+```env
+DB_POOL_SIZE=20
+DB_MAX_OVERFLOW=20
+DB_POOL_TIMEOUT=30
+DB_POOL_RECYCLE=1800
+```
+
+SQLAlchemy's default (5 + 10) silently caps concurrency at 15 connections, which surfaces as unexplained queueing latency rather than an error.
+
+---
+
+## Performance
+
+Measured with k6 against the Docker Compose stack on 4 cores / 8 threads / 16 GB, single Uvicorn worker. Full methodology in [perf/RESULTS.md](perf/RESULTS.md).
+
+### Background indexing under live traffic
+
+The critical test: continuous foreground traffic while a full repository re-index runs.
+
+| Metric | Before | After | Change |
+|---|---|---|---|
+| Requests served | 1,346 | **8,901** | **6.6x** |
+| Throughput | 5.25 req/s | **37.03 req/s** | **7.1x** |
+| Mean latency | 498.6 ms | **9.4 ms** | **53x** |
+| p95 latency | 143.9 ms | **27.4 ms** | **5.3x** |
+| p99 latency | 29,994 ms | **73.1 ms** | **410x** |
+| Worst case | 29,998 ms | **991.5 ms** | **30x** |
+| Blocked requests | **21** | **0** | eliminated |
+| Error rate | 1.56 % | **0 %** | eliminated |
+
+### All suites
+
+| Suite | Metric | Before | After |
+|---|---|---|---|
+| Search load | Throughput | 8.26 req/s | **20.60 req/s** |
+| Search load | p95 | 3,762.6 ms | **1,380.5 ms** |
+| Read load | Throughput | 60.16 req/s | **104.90 req/s** |
+| Read load | p95 | 1,672.6 ms | **767.8 ms** |
+| Spike (60 VU) | Throughput | 7.56 req/s | **18.32 req/s** |
+| Spike (60 VU) | p95 | 10,336.9 ms | **3,838.5 ms** |
+| Soak (10 min) | Throughput | 7.87 req/s | **15.34 req/s** |
+| Soak (10 min) | p95 | 2,306.3 ms | **600.4 ms** |
+
+Zero request failures in every suite after remediation. Soak latency drift **1.63x** against a 2.0x gate — **PASS**.
+
+### What made the difference
+
+| Fix | Impact |
+|---|---|
+| `os.walk` with in-place pruning instead of `Path.rglob("*")` | 705,000 directory entries → ~1,300; **12 min → 0.04 s** |
+| Scanner + parsing offloaded to a thread pool | Outage eliminated |
+| Synchronous → `AsyncQdrantClient` | Request path no longer blocks the loop |
+| Batched embedding requests | Indexing **~12 min → ~12 s** |
+| Batched node hydration (removed N+1) | ~10 fewer round-trips per search |
+| Explicit pool sizing | Removed hidden 15-connection ceiling |
+| Repository-scoped vector deletes | Fixed cross-repository data loss |
+
+**Key finding:** baseline p95 was 143.9 ms — a clear **PASS** against a 5,000 ms threshold — while the server was dead for 13 minutes. Percentiles cannot detect an outage, so the suite now gates on absolute availability counters (`blocked_requests == 0`).
+
+---
+
+## Architecture
+
+```
+frontend (React + Vite + Zustand)
+    │  /api proxy
+    ▼
+backend (FastAPI, single Uvicorn worker)
+    ├── api/           route handlers
+    ├── core/          scanner, tree-sitter parser, relationship extraction
+    ├── embedding/     embedding providers + Qdrant vector store
+    ├── llm/           LLM providers
+    ├── repositories/  SQLAlchemy data access
+    ├── services/      indexing, search, explain, trace
+    ├── database.py    async engine + tuned connection pool
+    └── model_store.py JSON-backed model configuration
+
+postgres (symbols, edges)     qdrant (vectors, payload-filtered by repository_id)
+```
+
+**Single-worker by design.** All blocking work — filesystem traversal, parsing, vector-store I/O — runs in threads or through async clients. This is the invariant the performance work exists to protect, and the reason regressions are caught by tests rather than by users.
+
+---
 
 ## API Reference
 
@@ -122,89 +232,111 @@ All endpoints are prefixed with `/api`.
 | `GET` | `/repositories` | List indexed repositories |
 | `DELETE` | `/repositories/{id}` | Delete a repository and its vectors |
 | `GET` | `/repositories/browse?path=` | List subdirectories for the file browser |
+| `GET` | `/repositories/{id}/status` | Indexing progress |
 | `POST` | `/search` | Semantic search |
 | `POST` | `/explain` | LLM explanation of code |
-| `POST` | `/trace` | Trace code flow with neighbors |
-| `GET` | `/graph/{repo_id}` | Knowledge graph data |
-| `GET` | `/models` | List configured models |
-| `POST` | `/models` | Create a model config |
-| `PUT` | `/models/{id}` | Update a model config |
-| `DELETE` | `/models/{id}` | Delete a model config |
+| `POST` | `/trace` | Trace code flow with neighbours |
+| `GET` | `/graph/{repo_id}` | Knowledge graph — supports `limit` and `symbol_type` |
+| `GET` | `/symbols/{id}` | Symbol detail |
+| `GET` | `/symbols/{id}/relationships` | Symbol relationships |
+| `GET` `POST` | `/models` | List / create model configs |
+| `PUT` `DELETE` | `/models/{id}` | Update / delete a model config |
 | `POST` | `/models/{id}/activate` | Set as active model |
-| `GET` | `/models/{id}/health` | Check provider connectivity |
+| `GET` | `/models/{id}/health` | Provider connectivity check |
+| `GET` `PUT` | `/config/providers` | Read / switch the active provider |
+
+---
 
 ## Project Structure
 
 ```
 backend/
   app/
-    api/            # Route handlers
-    core/           # Scanner, parser, relationship extraction
-    embedding/      # Embedding providers + Qdrant vector store
-    llm/            # LLM providers
-    models/         # SQLAlchemy models + enums
-    repositories/   # Database access layer
-    schemas/        # Pydantic request/response models
-    services/       # Business logic (indexing, search, explain, trace)
-    config.py       # Settings + runtime provider overrides
-    main.py         # FastAPI app, lifespan, exception handlers
-    model_store.py  # JSON-based model configuration persistence
-  alembic/          # Database migrations
+    api/            route handlers
+    core/           scanner, parser, relationship extraction
+    embedding/      embedding providers + Qdrant vector store
+    llm/            LLM providers
+    models/         SQLAlchemy models + enums
+    repositories/   data access layer
+    schemas/        Pydantic request/response models
+    services/       indexing, search, explain, trace
+    config.py       settings + runtime provider overrides
+    database.py     async engine + connection pool
+    model_store.py  model configuration persistence
+  tests/            95-test regression suite
+  alembic/          migrations
 
 frontend/
   src/
-    components/     # React components
-    services/       # API client
-    schemas.ts      # Zod schemas + TypeScript types
-    store.ts        # Zustand state management
-    index.css       # Theme variables + code highlighting
+    components/     React components
+    services/       API client
+    schemas.ts      Zod schemas + TypeScript types
+    store.ts        Zustand state
+
+perf/               k6 load-testing suite
+  k6/               test scripts
+  results/          captured summaries (raw samples gitignored)
+  run-k6.ps1        harness
 ```
 
-## Development
-
-```bash
-# Lint backend
-cd backend && uv run ruff check .
-
-# Typecheck frontend
-cd frontend && pnpm exec tsc --noEmit
-
-# Database migrations
-cd backend
-uv run alembic revision --autogenerate -m "description"
-uv run alembic upgrade head
-```
+---
 
 ## Testing
 
-Backend uses `pytest`; frontend uses `vitest`. Tests run automatically in CI on every push/PR (see `.github/workflows/ci.yml`).
-
 ```bash
-# Backend unit tests (no DB/Qdrant needed)
+# Backend
 cd backend
-uv sync --group dev   # ensure dev/test deps installed
-pytest -v             # or: python -m pytest tests
+uv sync --group dev
+pytest -q                 # 95 passed, 2 skipped
+ruff check .              # All checks passed!
 
-# Backend lint
-uv run ruff check .
-
-# Frontend tests + typecheck
+# Frontend
 cd frontend
-pnpm install
-pnpm test            # vitest run
+pnpm test
 pnpm exec tsc --noEmit
 ```
 
-The backend suite covers the pure-logic layer — tree-sitter parsing, file scanning, relationship extraction, the model store, config/active-provider switching, and enums/exceptions — and runs entirely offline without external services.
+The backend suite covers scanning and pruning, tree-sitter parsing, relationship extraction, the model store, provider-resolution consistency, the Qdrant client contract, vector-store collection reuse, and graph edge scoping. It runs entirely offline.
+
+Tests added during the performance work were **mutation-tested** — each was verified to fail when its corresponding fix is reverted, so they guard real invariants rather than current behaviour.
+
+---
+
+## Load Testing
+
+```bash
+cd perf
+
+./run-k6.ps1 -Script /scripts/smoke.js           -Name smoke      # always first
+./run-k6.ps1 -Script /scripts/probe.js           -Name probe      # verify target app
+./run-k6.ps1 -Script /scripts/read-load.js       -Name read
+./run-k6.ps1 -Script /scripts/search-load.js     -Name search
+./run-k6.ps1 -Script /scripts/index-contention.js -Name contention -Env @{ RESET_REPO='true' }
+./run-k6.ps1 -Script /scripts/spike.js           -Name spike -Env @{ DURATION='60s' }
+./run-k6.ps1 -Script /scripts/soak.js            -Name soak  -Env @{ DURATION='10m' }
+```
+
+- Raw samples are opt-in (`-Raw`); they run to ~100 MB per run.
+- Results land in `perf/results/<name>-summary.json` and `<name>-stdout.txt`.
+- `run-k6.ps1` surfaces k6 stderr and **fails the run on script errors even when k6 exits 0** — a script exception produces no requests, so thresholds would otherwise stay green while the test is broken.
+- `probe.js` verifies the target application by its OpenAPI title and **exits non-zero on mismatch**, because load tests once ran against the wrong application on a shadowed port without failing.
+- Benchmarks always run against `BASE_URL=http://backend:8000` (the compose network), so a host port conflict cannot silently redirect a measurement. Note that if another local service occupies host port 8000, browse to the container service rather than `localhost`.
+
+---
 
 ## Key Decisions
 
-- **tree-sitter 0.21.3** pinned for compatibility with tree-sitter-languages. Newer versions break the wrapper.
-- **Qdrant `query_points()`** replaces deprecated `search()` API.
-- **Async SQLAlchemy** throughout. Neon requires `ssl=require` in connect_args.
-- **JSON model store** (`models.json`) instead of database table for model configs — simpler, no migration needed, easy to version control.
-- **Runtime provider switching** via module-level variables, not env var reload. Allows switching without restart.
+- **tree-sitter 0.21.3** pinned — newer versions break the `tree-sitter-languages` wrapper.
+- **`os.walk` with in-place pruning** instead of `Path.rglob("*")`, which cannot prune and walked ~705,000 directory entries to find ~1,300 files.
+- **All blocking work off the event loop** — threads for CPU/IO, `AsyncQdrantClient` for Qdrant. The core invariant of this service.
+- **Qdrant `query_points()`** replaces the deprecated `search()` API; client pinned `>=1.12.0,<1.13.0` to match the server.
+- **Shared collection, repository-scoped payloads.** One collection for all repositories, every read and delete filtered by `repository_id`. Recreating the collection on re-index destroyed every other repository's data (BUG-012).
+- **Async SQLAlchemy throughout**, with an explicitly sized connection pool.
+- **JSON model store** (`models.json`) rather than a database table — simple, no migration, easy to version.
+- **Pagination by default** on the graph endpoint, with edges scoped to the returned node page so the client never receives dangling references.
+
+---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
