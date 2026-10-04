@@ -1,5 +1,6 @@
 import pytest
 
+from app import model_store as ms
 from app.config import (
     get_active_embedding_provider,
     get_active_llm_provider,
@@ -7,17 +8,37 @@ from app.config import (
     set_active_llm_provider,
 )
 from app.exceptions import InvalidUUIDError
+from app.model_store import ModelStore
 from app.utils import parse_uuid
 
 
-class TestActiveProviders:
-    def test_set_and_get_llm(self):
-        set_active_llm_provider("OpenAI")
-        assert get_active_llm_provider() == "openai"
+@pytest.fixture
+def no_active_model(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    """Isolate from the real models.json so only the process globals are set.
 
-    def test_set_and_get_embedding(self):
+    get_active_*_provider() consults the durable model store first; these tests
+    exercise the global fallback, so the store must report no active model.
+    """
+    monkeypatch.setattr(ms, "MODELS_FILE", tmp_path / "models.json")
+    store = ModelStore()  # empty -> get_active() is None
+    monkeypatch.setattr("app.model_store.model_store", store)
+    return store
+
+
+class TestActiveProviders:
+    def test_set_and_get_llm(self, no_active_model):
+        set_active_llm_provider("OpenAI")
+        try:
+            assert get_active_llm_provider() == "openai"
+        finally:
+            set_active_llm_provider("ollama")
+
+    def test_set_and_get_embedding(self, no_active_model):
         set_active_embedding_provider("Ollama")
-        assert get_active_embedding_provider() == "ollama"
+        try:
+            assert get_active_embedding_provider() == "ollama"
+        finally:
+            set_active_embedding_provider("ollama")
 
 
 class TestParseUuid:

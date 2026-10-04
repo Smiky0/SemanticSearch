@@ -79,3 +79,59 @@ class TestModelStoreActive:
     def test_new_model_not_active_by_default(self, store: ModelStore):
         m = store.add(_config())
         assert m.active is False
+
+
+class TestSetActiveProvider:
+    """PUT /api/config/providers routes through this, so it must persist."""
+
+    def test_activates_matching_existing_provider(self, store: ModelStore):
+        gem = store.add(_config(name="gem", provider="gemini"))
+        oll = store.add(
+            _config(name="oll", provider="ollama", type="local", base_url="http://x:11434")
+        )
+        store.set_active(gem.id)
+
+        result = store.set_active_provider("ollama")
+
+        assert result is not None
+        assert result.provider == "ollama"
+        assert result.id == oll.id
+        assert store.get(gem.id).active is False
+        assert store.get(oll.id).active is True
+
+    def test_is_case_insensitive(self, store: ModelStore):
+        oll = store.add(_config(name="oll", provider="ollama", type="local"))
+        store.set_active_provider("OLLAMA")
+        assert store.get_active().provider == "ollama"
+        assert store.get(oll.id).active is True
+
+    def test_synthesises_config_when_provider_absent(self, store: ModelStore):
+        """A provider that was never configured still becomes active."""
+        assert store.get_active() is None
+
+        result = store.set_active_provider("ollama")
+
+        assert result is not None
+        assert result.provider == "ollama"
+        assert result.active is True
+        assert len(store.list()) == 1
+
+    def test_synthesised_gemini_config_carries_api_key(self, store: ModelStore):
+        result = store.set_active_provider("gemini")
+        assert result is not None
+        assert result.provider == "gemini"
+        assert result.type == "cloud"
+
+    def test_selection_survives_reload(self, store: ModelStore, tmp_path: Path):
+        """BUG-004 regression: the selection must be durable."""
+        store.add(_config(name="gem", provider="gemini"))
+        store.set_active_provider("ollama")
+
+        reloaded = ModelStore()
+        active = reloaded.get_active()
+        assert active is not None
+        assert active.provider == "ollama"
+
+    def test_unknown_provider_raises(self, store: ModelStore):
+        with pytest.raises(ValueError, match="Unknown provider"):
+            store.set_active_provider("not-a-provider")
