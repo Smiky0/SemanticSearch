@@ -105,5 +105,67 @@ class ModelStore:
                 return m
         return None
 
+    def set_active_provider(self, provider: str) -> ModelConfig | None:
+        """Activate an existing config for `provider`, or synthesise one.
+
+        Used by PUT /api/config/providers. If the provider is not configured yet
+        (for example ollama on a fresh install), a config is created from the
+        environment defaults so the toggle works without a separate "add model"
+        step. Selection is persisted to models.json, so it survives restarts.
+        """
+        provider = provider.lower()
+
+        for m in self._models:
+            if m.provider == provider:
+                m.active = True
+            else:
+                m.active = False
+        self._save()
+        existing = self.get_active()
+        if existing is not None:
+            logger.info("model_activated", provider=provider, model=existing.name)
+            return existing
+
+        config = self._build_default(provider)
+        self._models.append(config)
+        self._save()
+        logger.info("model_auto_created", provider=provider, model=config.name)
+        return config
+
+    def _build_default(self, provider: str) -> ModelConfig:
+        """Build a sensible default config for a provider from env settings."""
+        from app.config import get_settings
+
+        settings = get_settings()
+
+        if provider == "ollama":
+            return ModelConfig(
+                name=f"Ollama ({settings.ollama_model})",
+                type="local",
+                provider="ollama",
+                base_url=settings.ollama_url,
+                llm_model=settings.ollama_model,
+                embedding_model=settings.ollama_embedding_model,
+                embedding_dimensions=settings.embedding_dimensions,
+                timeout=300,
+                active=True,
+            )
+
+        if provider == "gemini":
+            return ModelConfig(
+                name=f"Gemini ({settings.gemini_model})",
+                type="cloud",
+                provider="gemini",
+                api_key=settings.gemini_api_key,
+                llm_model=settings.gemini_model,
+                embedding_model=settings.embedding_model,
+                embedding_dimensions=settings.embedding_dimensions,
+                active=True,
+            )
+
+        raise ValueError(
+            f"Unknown provider: {provider}. Supported: gemini, ollama"
+        )
+
 
 model_store = ModelStore()

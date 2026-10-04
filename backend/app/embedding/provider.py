@@ -118,18 +118,24 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         return self._dimensions
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
         try:
-            embeddings = []
+            # One request for the whole batch. One request per text took ~12
+            # minutes to index a repo; this takes seconds.
             async with httpx.AsyncClient() as client:
-                for text in texts:
-                    response = await client.post(
-                        f"{self._url}/api/embed",
-                        json={"model": self._model, "input": text},
-                        timeout=60.0,
-                    )
-                    response.raise_for_status()
-                    data = response.json()
-                    embeddings.append(data["embeddings"][0])
+                response = await client.post(
+                    f"{self._url}/api/embed",
+                    json={"model": self._model, "input": texts},
+                    timeout=300.0,
+                )
+            response.raise_for_status()
+            data = response.json()
+            embeddings = data["embeddings"]
+            if len(embeddings) != len(texts):
+                raise ValueError(
+                    f"Ollama returned {len(embeddings)} embeddings for {len(texts)} texts"
+                )
             return embeddings
         except httpx.HTTPStatusError as e:
             logger.error("ollama_embedding_http_error", status_code=e.response.status_code)

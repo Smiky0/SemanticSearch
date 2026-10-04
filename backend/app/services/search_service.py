@@ -35,16 +35,26 @@ async def semantic_search(
         filter=search_filter,
     )
 
+    if not results:
+        return []
+
     async with async_session() as db:
         node_repo = NodeRepo(db)
-        enriched = []
+
+        parsed: list[tuple[uuid.UUID, float]] = []
         for r in results:
             try:
-                node = await node_repo.get(uuid.UUID(r["id"]))
+                parsed.append((uuid.UUID(r["id"]), r["score"]))
             except ValueError:
                 logger.warning("invalid_vector_id", vector_id=r["id"])
-                continue
+
+        # One query for the whole result set rather than one per hit.
+        nodes = await node_repo.get_many({node_id for node_id, _ in parsed})
+
+        enriched = []
+        for node_id, score in parsed:
+            node = nodes.get(node_id)
             if node:
-                enriched.append({"node": node, "score": r["score"]})
+                enriched.append({"node": node, "score": score})
 
     return enriched

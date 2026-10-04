@@ -33,7 +33,16 @@ _connect_args = {}
 if ssl_mode:
     _connect_args["ssl"] = ssl_mode
 
-_engine_kwargs: dict = {"echo": False}
+_engine_kwargs: dict = {
+    "echo": False,
+    # Defaults are 5 + 10, which caps concurrency at 15 connections.
+    "pool_size": settings.db_pool_size,
+    "max_overflow": settings.db_max_overflow,
+    "pool_timeout": settings.db_pool_timeout,
+    "pool_recycle": settings.db_pool_recycle,
+    # Catches connections Postgres dropped while idle.
+    "pool_pre_ping": True,
+}
 if _connect_args:
     _engine_kwargs["connect_args"] = _connect_args
 

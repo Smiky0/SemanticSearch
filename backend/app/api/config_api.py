@@ -9,6 +9,7 @@ from app.config import (
     set_active_llm_provider,
 )
 from app.exceptions import AppError
+from app.model_store import model_store
 
 router = APIRouter()
 
@@ -100,6 +101,18 @@ async def set_provider(body: dict):
     provider = body.get("provider", "").strip().lower()
     if provider not in ("gemini", "ollama"):
         raise InvalidProviderError(provider)
+
+    # model_store is what the provider getters read, so it has to be the
+    # thing we write to. Updating only the globals left the toggle inert.
+    model_store.set_active_provider(provider)
+
+    # Keep the globals in sync as a fallback for setups with no model file.
     set_active_llm_provider(provider)
     set_active_embedding_provider(provider)
-    return {"active_llm": provider, "active_embedding": provider}
+
+    active = model_store.get_active()
+    return {
+        "active_llm": active.provider if active else provider,
+        "active_embedding": active.provider if active else provider,
+        "persisted": True,
+    }

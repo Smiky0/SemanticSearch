@@ -149,20 +149,20 @@ async def delete_repository(
         edge_repo = EdgeRepo(del_db)
 
         nodes = await node_repo.get_by_repository(rid)
-        point_ids = [str(n.id) for n in nodes if n.qdrant_point_id]
 
-        if point_ids:
-            try:
-                vector_store = get_vector_store()
-                await vector_store.delete(
-                    settings.qdrant_collection, point_ids
-                )
-            except Exception as e:
-                logger.warning(
-                    "vector_delete_failed",
-                    repo_id=repo_id,
-                    error=str(e),
-                )
+        # Filter on the repository payload. node.qdrant_point_id is never
+        # populated, so deleting by it silently left every vector behind.
+        try:
+            vector_store = get_vector_store()
+            await vector_store.delete_by_repository(
+                settings.qdrant_collection, str(rid)
+            )
+        except Exception as e:
+            logger.warning(
+                "vector_delete_failed",
+                repo_id=repo_id,
+                error=str(e),
+            )
 
         all_edges = await edge_repo.get_by_repository(rid)
         for e in all_edges:

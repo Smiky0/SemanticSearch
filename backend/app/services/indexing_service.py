@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from pathlib import Path
 
@@ -17,6 +18,84 @@ from app.repositories.repository_repo import RepositoryRepo
 
 logger = structlog.get_logger()
 
+# Files parsed between yields back to the event loop.
+PARSE_YIELD_EVERY = 25
+
+
+def _read_text(path: str) -> str:
+    return Path(path).read_text(encoding="utf-8", errors="ignore")
+
+
+def _parse_file(abs_path: str, source_code: str, language: str) -> list:
+    return extract_code_units(abs_path, source_code, language)
+
+
+async def _parse_repository_files(
+    files: list[dict],
+) -> list[Node]:
+    """Read and parse every file in a thread, yielding to the loop as we go.
+
+    Parsing a whole repo is minutes of CPU. On the event loop that blocks the
+    single worker and takes the API down, so each file goes to a thread and we
+    yield every PARSE_YIELD_EVERY files to let requests through.
+    """
+    loop = asyncio.get_running_loop()
+    all_nodes: list[Node] = []
+    parsed = 0
+
+    for file_info in files:
+        abs_path = file_info["absolute_path"]
+        rel_path = file_info["relative_path"]
+        language = file_info["language"]
+
+        try:
+            source_code = await loop.run_in_executor(None, _read_text, abs_path)
+        except Exception:
+            logger.warning("file_read_failed", path=rel_path)
+            continue
+
+        all_nodes.append(
+            Node(
+                repository_id=file_info["_repo_id"],
+                file_path=rel_path,
+                language=language,
+                symbol_name=rel_path,
+                symbol_type=SymbolType.FILE,
+                start_line=1,
+                end_line=source_code.count("\n") + 1,
+                source_code=source_code,
+            )
+        )
+
+        try:
+            code_units = await loop.run_in_executor(
+                None, _parse_file, abs_path, source_code, language
+            )
+        except Exception:
+            logger.warning("file_parse_failed", path=rel_path)
+            continue
+
+        for unit in code_units:
+            all_nodes.append(
+                Node(
+                    repository_id=file_info["_repo_id"],
+                    file_path=rel_path,
+                    language=language,
+                    symbol_name=unit.symbol_name,
+                    symbol_type=unit.symbol_type,
+                    start_line=unit.start_line,
+                    end_line=unit.end_line,
+                    source_code=unit.source_code,
+                    docstring=unit.docstring,
+                )
+            )
+
+        parsed += 1
+        if parsed % PARSE_YIELD_EVERY == 0:
+            await asyncio.sleep(0)
+
+    return all_nodes
+
 
 async def index_repository(repo_id: uuid.UUID) -> None:
     settings = get_settings()
@@ -33,7 +112,10 @@ async def index_repository(repo_id: uuid.UUID) -> None:
         logger.info("indexing_started", repo_id=str(repo_id), path=repo.path)
 
         try:
-            files = scan_repository(repo.path)
+            loop = asyncio.get_running_loop()
+            files = await loop.run_in_executor(None, scan_repository, repo.path)
+            for f in files:
+                f["_repo_id"] = repo_id
             logger.info("files_found", count=len(files))
 
             embedding_provider = get_embedding_provider()
@@ -41,41 +123,13 @@ async def index_repository(repo_id: uuid.UUID) -> None:
             await vector_store.ensure_collection(
                 settings.qdrant_collection, embedding_provider.dimensions()
             )
+            # Only this repo's vectors. Wiping the whole collection here
+            # used to erase every other indexed repository.
+            await vector_store.delete_by_repository(
+                settings.qdrant_collection, str(repo_id)
+            )
 
-            all_nodes: list[Node] = []
-
-            for file_info in files:
-                abs_path = file_info["absolute_path"]
-                rel_path = file_info["relative_path"]
-                language = file_info["language"]
-
-                try:
-                    source_code = Path(abs_path).read_text(
-                        encoding="utf-8", errors="ignore"
-                    )
-                except Exception:
-                    logger.warning("file_read_failed", path=rel_path)
-                    continue
-
-                file_node = _create_file_node(
-                    repo_id, rel_path, language, source_code
-                )
-                all_nodes.append(file_node)
-
-                code_units = extract_code_units(abs_path, source_code, language)
-                for unit in code_units:
-                    node = Node(
-                        repository_id=repo_id,
-                        file_path=rel_path,
-                        language=language,
-                        symbol_name=unit.symbol_name,
-                        symbol_type=unit.symbol_type,
-                        start_line=unit.start_line,
-                        end_line=unit.end_line,
-                        source_code=unit.source_code,
-                        docstring=unit.docstring,
-                    )
-                    all_nodes.append(node)
+            all_nodes = await _parse_repository_files(files)
 
             if all_nodes:
                 await node_repo.bulk_create(all_nodes)
@@ -164,21 +218,6 @@ async def index_repository(repo_id: uuid.UUID) -> None:
                 error=str(e),
                 exc_info=True,
             )
-
-
-def _create_file_node(
-    repo_id: uuid.UUID, rel_path: str, language: str, source_code: str
-) -> Node:
-    return Node(
-        repository_id=repo_id,
-        file_path=rel_path,
-        language=language,
-        symbol_name=rel_path,
-        symbol_type=SymbolType.FILE,
-        start_line=1,
-        end_line=source_code.count("\n") + 1,
-        source_code=source_code,
-    )
 
 
 def _node_embedding_text(node: Node) -> str:

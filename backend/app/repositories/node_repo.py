@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.edge import Edge
@@ -20,6 +20,16 @@ class NodeRepo:
         result = await self.db.execute(select(Node).where(Node.id == node_id))
         return result.scalar_one_or_none()
 
+    async def get_many(self, node_ids: set[uuid.UUID]) -> dict[uuid.UUID, Node]:
+        """Fetch many nodes in one query, keyed by id.
+
+        Replaces the per-hit SELECT the search path used to issue.
+        """
+        if not node_ids:
+            return {}
+        result = await self.db.execute(select(Node).where(Node.id.in_(node_ids)))
+        return {n.id: n for n in result.scalars().all()}
+
     async def find_by_symbol(
         self, repository_id: uuid.UUID, symbol_name: str
     ) -> list[Node]:
@@ -31,11 +41,30 @@ class NodeRepo:
         )
         return list(result.scalars().all())
 
-    async def get_by_repository(self, repository_id: uuid.UUID) -> list[Node]:
-        result = await self.db.execute(
-            select(Node).where(Node.repository_id == repository_id)
-        )
+    async def get_by_repository(
+        self,
+        repository_id: uuid.UUID,
+        limit: int | None = None,
+        symbol_type: SymbolType | None = None,
+    ) -> list[Node]:
+        stmt = select(Node).where(Node.repository_id == repository_id)
+        if symbol_type is not None:
+            stmt = stmt.where(Node.symbol_type == symbol_type)
+        # Deterministic order so pagination is stable across requests.
+        stmt = stmt.order_by(Node.file_path, Node.start_line, Node.symbol_name)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def count_by_repository(
+        self, repository_id: uuid.UUID, symbol_type: SymbolType | None = None
+    ) -> int:
+        stmt = select(func.count()).select_from(Node).where(Node.repository_id == repository_id)
+        if symbol_type is not None:
+            stmt = stmt.where(Node.symbol_type == symbol_type)
+        result = await self.db.execute(stmt)
+        return result.scalar_one()
 
     async def get_by_file(
         self, repository_id: uuid.UUID, file_path: str

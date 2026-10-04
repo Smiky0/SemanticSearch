@@ -29,10 +29,10 @@ SYSTEM_INSTRUCTIONS = (
 
 
 class GeminiProvider(LLMProvider):
-    def __init__(self):
+    def __init__(self, api_key: str = "", model: str = ""):
         settings = get_settings()
-        self._api_key = settings.gemini_api_key
-        self._model = settings.gemini_model
+        self._api_key = api_key or settings.gemini_api_key
+        self._model = model or settings.gemini_model
 
     async def generate(self, context: str, query: str, instructions: str) -> str:
         prompt = (
@@ -77,10 +77,10 @@ class GeminiProvider(LLMProvider):
 
 
 class OllamaProvider(LLMProvider):
-    def __init__(self):
+    def __init__(self, base_url: str = "", model: str = ""):
         settings = get_settings()
-        self._url = settings.ollama_url.rstrip("/")
-        self._model = settings.ollama_model
+        self._url = (base_url or settings.ollama_url).rstrip("/")
+        self._model = model or settings.ollama_model
 
     async def generate(self, context: str, query: str, instructions: str) -> str:
         prompt = (
@@ -133,10 +133,27 @@ class OllamaProvider(LLMProvider):
 
 
 def get_llm_provider() -> LLMProvider:
+    from app.model_store import model_store
+
+    active = model_store.get_active()
+    if active:
+        if active.provider == "gemini":
+            return GeminiProvider(
+                api_key=active.api_key,
+                model=active.llm_model,
+            )
+        if active.provider == "ollama":
+            return OllamaProvider(
+                base_url=active.base_url,
+                model=active.llm_model,
+            )
+
     settings = get_settings()
     provider_name = settings.llm_provider.lower()
     if provider_name == "gemini":
         return GeminiProvider()
     if provider_name == "ollama":
         return OllamaProvider()
-    raise ValueError(f"Unknown LLM provider: {provider_name}. Supported: gemini, ollama")
+    raise ValueError(
+        f"Unknown LLM provider: {provider_name}. Supported: gemini, ollama"
+    )

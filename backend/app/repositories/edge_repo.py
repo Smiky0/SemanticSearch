@@ -21,6 +21,25 @@ class EdgeRepo:
         )
         return list(result.scalars().all())
 
+    async def get_between(
+        self, repository_id: uuid.UUID, node_ids: set[uuid.UUID]
+    ) -> list[Edge]:
+        """Edges with both endpoints inside the given node set.
+
+        Pass the current page of nodes so a paginated response returns the
+        edges for that page instead of the whole repository.
+        """
+        if not node_ids:
+            return []
+        result = await self.db.execute(
+            select(Edge).where(
+                Edge.repository_id == repository_id,
+                Edge.source_id.in_(node_ids),
+                Edge.target_id.in_(node_ids),
+            )
+        )
+        return list(result.scalars().all())
+
     async def get_outgoing(
         self, node_id: uuid.UUID, edge_type: EdgeType | None = None
     ) -> list[Edge]:

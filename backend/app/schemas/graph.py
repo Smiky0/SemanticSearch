@@ -20,3 +20,6 @@ class GraphEdge(BaseModel):
 class GraphResponse(BaseModel):
     nodes: list[GraphNode]
     edges: list[GraphEdge]
+    total_nodes: int = 0
+    returned_nodes: int = 0
+    truncated: bool = False
