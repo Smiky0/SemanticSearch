@@ -1,0 +1,298 @@
+{
+    "root_group": {
+        "checks": {},
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+                "infrastructure": {
+                    "path": "::infrastructure",
+                    "id": "5c705f4cdd66f5ff5378e774f117232a",
+                    "groups": {},
+                    "checks": {
+                            "GET /health -> 200": {
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "GET /health -> 200",
+                                "path": "::infrastructure::GET /health -> 200",
+                                "id": "47ea26a5b40ba343a7df3aa9bdc99ebf"
+                            },
+                            "GET /api/repositories -> 200": {
+                                "id": "0bc8b019376c6e0ef7d24f92c88d30b3",
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "GET /api/repositories -> 200",
+                                "path": "::infrastructure::GET /api/repositories -> 200"
+                            },
+                            "GET /api/repositories/browse -> 200": {
+                                "name": "GET /api/repositories/browse -> 200",
+                                "path": "::infrastructure::GET /api/repositories/browse -> 200",
+                                "id": "025a9a6818ef3fc66b501112e5ea57c2",
+                                "passes": 1,
+                                "fails": 0
+                            }
+                        },
+                    "name": "infrastructure"
+                },
+                "configuration": {
+                    "name": "configuration",
+                    "path": "::configuration",
+                    "id": "c9b5328956ea053a57dc7a775fba2068",
+                    "groups": {},
+                    "checks": {
+                            "GET /api/config/providers -> 200": {
+                                "name": "GET /api/config/providers -> 200",
+                                "path": "::configuration::GET /api/config/providers -> 200",
+                                "id": "8d71d57926b467ff1d4dab09a5c339cf",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "GET /api/models -> 200": {
+                                "name": "GET /api/models -> 200",
+                                "path": "::configuration::GET /api/models -> 200",
+                                "id": "91ab70b631c68be162cc877640428687",
+                                "passes": 1,
+                                "fails": 0
+                            }
+                        }
+                },
+                "repository scoped": {
+                    "name": "repository scoped",
+                    "path": "::repository scoped",
+                    "id": "395ec0ce5a50c5aa59bfdb1816594c05",
+                    "groups": {},
+                    "checks": {
+                            "GET /api/repositories/{id}/status -> 200": {
+                                "name": "GET /api/repositories/{id}/status -> 200",
+                                "path": "::repository scoped::GET /api/repositories/{id}/status -> 200",
+                                "id": "328ce269dbc595ecd21253d9f7a40f40",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "GET /api/graph/{id} -> 200": {
+                                "fails": 0,
+                                "name": "GET /api/graph/{id} -> 200",
+                                "path": "::repository scoped::GET /api/graph/{id} -> 200",
+                                "id": "efb229a7018a0401c055f81f0b071dee",
+                                "passes": 1
+                            },
+                            "GET /api/symbols/{id} -> 200": {
+                                "name": "GET /api/symbols/{id} -> 200",
+                                "path": "::repository scoped::GET /api/symbols/{id} -> 200",
+                                "id": "33da80b159c59b5b1dda2114a764e7b1",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "GET /api/symbols/{id}/relationships -> 200": {
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "GET /api/symbols/{id}/relationships -> 200",
+                                "path": "::repository scoped::GET /api/symbols/{id}/relationships -> 200",
+                                "id": "e24f12f42a304975fa1a3912cee55928"
+                            }
+                        }
+                },
+                "semantic pipeline (slow path)": {
+                    "name": "semantic pipeline (slow path)",
+                    "path": "::semantic pipeline (slow path)",
+                    "id": "6f4fbd138cffd8cca0b18ce19d47839a",
+                    "groups": {},
+                    "checks": {
+                            "POST /api/search -> 200": {
+                                "name": "POST /api/search -> 200",
+                                "path": "::semantic pipeline (slow path)::POST /api/search -> 200",
+                                "id": "02cc6a395ec2f9fb5f41dcecd370b318",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "POST /api/explain -> 200": {
+                                "name": "POST /api/explain -> 200",
+                                "path": "::semantic pipeline (slow path)::POST /api/explain -> 200",
+                                "id": "4685bd376850fe713bd4d3fd77ffd07d",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "POST /api/trace -> 200": {
+                                "name": "POST /api/trace -> 200",
+                                "path": "::semantic pipeline (slow path)::POST /api/trace -> 200",
+                                "id": "db4a35e6b9801013bc396ff457b4fb9e",
+                                "passes": 1,
+                                "fails": 0
+                            }
+                        }
+                },
+                "frontend proxy": {
+                    "name": "frontend proxy",
+                    "path": "::frontend proxy",
+                    "id": "456a4644f3f46a1c9573118e79174455",
+                    "groups": {},
+                    "checks": {
+                            "GET / (nginx) -> 200": {
+                                "fails": 0,
+                                "name": "GET / (nginx) -> 200",
+                                "path": "::frontend proxy::GET / (nginx) -> 200",
+                                "id": "f8a6848e066e1a81c49e7740dfb5155a",
+                                "passes": 1
+                            }
+                        }
+                }
+            }
+    },
+    "metrics": {
+        "http_req_duration": {
+            "med": 19.226569500000004,
+            "max": 6153.53588,
+            "p(90)": 3205.7240757000045,
+            "p(95)": 5075.87430085,
+            "avg": 789.3666644285714,
+            "min": 0.819539
+        },
+        "vus_max": {
+            "value": 1,
+            "min": 1,
+            "max": 1
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 14,
+            "thresholds": {
+                "rate==0": false
+            },
+            "value": 0
+        },
+        "iterations": {
+            "count": 1,
+            "rate": 0.0864539536076533
+        },
+        "http_req_connecting": {
+            "avg": 0.31587992857142855,
+            "min": 0,
+            "med": 0,
+            "max": 3.839891,
+            "p(90)": 0.3224956000000002,
+            "p(95)": 1.5840835499999988
+        },
+        "http_reqs": {
+            "count": 14,
+            "rate": 1.210355350507146
+        },
+        "checks": {
+            "passes": 13,
+            "fails": 0,
+            "value": 1
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 1
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 0.819539,
+            "med": 19.226569500000004,
+            "max": 6153.53588,
+            "p(90)": 3205.7240757000045,
+            "p(95)": 5075.87430085,
+            "avg": 789.3666644285714
+        },
+        "http_req_waiting": {
+            "p(90)": 3205.4508519000046,
+            "p(95)": 5075.565950499999,
+            "avg": 789.1137880714285,
+            "min": 0.655131,
+            "med": 19.075312,
+            "max": 6153.201464
+        },
+        "http_req_receiving": {
+            "min": 0.081704,
+            "med": 0.161058,
+            "max": 0.503524,
+            "p(90)": 0.2969347,
+            "p(95)": 0.3695531499999999,
+            "avg": 0.19272364285714283
+        },
+        "data_received": {
+            "count": 51441,
+            "rate": 4447.277827531293
+        },
+        "smoke_failures": {
+            "count": 0,
+            "rate": 0,
+            "thresholds": {
+                "count==0": false
+            }
+        },
+        "http_req_sending": {
+            "p(95)": 0.16082804999999997,
+            "avg": 0.06015271428571429,
+            "min": 0.014001,
+            "med": 0.040602,
+            "max": 0.20971,
+            "p(90)": 0.11896610000000005
+        },
+        "iteration_duration": {
+            "avg": 11532.277549,
+            "min": 11532.277549,
+            "med": 11532.277549,
+            "max": 11532.277549,
+            "p(90)": 11532.277549,
+            "p(95)": 11532.277549
+        },
+        "data_sent": {
+            "count": 1776,
+            "rate": 153.54222160719226
+        },
+        "http_req_blocked": {
+            "avg": 0.4636657857142857,
+            "min": 0.003401,
+            "med": 0.007900500000000001,
+            "max": 4.763837,
+            "p(90)": 1.0029983000000011,
+            "p(95)": 2.5151788999999987
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "group_duration": {
+            "p(90)": 6510.890671200002,
+            "p(95)": 8614.987794599998,
+            "avg": 2206.1758692,
+            "min": 6.920143,
+            "med": 71.389815,
+            "max": 10719.084918
+        }
+    },
+    "setup_data": {
+        "repoId": "5faaaa2d-3403-4aca-8f2b-e20f7a17149f",
+        "repos": [
+            {
+                "id": "5faaaa2d-3403-4aca-8f2b-e20f7a17149f",
+                "path": "/host/projects/devcart",
+                "status": "completed",
+                "symbols": 143
+            },
+            {
+                "id": "fa61d2e0-8914-4181-9adf-414ddb992d8b",
+                "path": "/host/projects/Semantic-Code-Search",
+                "status": "completed",
+                "symbols": 381
+            },
+            {
+                "id": "fcaf2d6f-ee16-419d-879e-a0029735c277",
+                "path": "/host/projects/portfolio_v4",
+                "status": "completed",
+                "symbols": 30
+            },
+            {
+                "status": "completed",
+                "symbols": 276,
+                "id": "8f64cf4c-0a47-4838-9749-1cb062b797fa",
+                "path": "/host/users/Downloads/Semantic-Code-Search"
+            }
+        ]
+    }
+}

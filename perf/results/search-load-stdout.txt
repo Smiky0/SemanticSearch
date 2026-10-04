@@ -1,0 +1,58 @@
+time="2026-10-01T17:12:44Z" level=info msg="search load -> repository 4963c4d4-507e-4f05-9a92-f52847c56b7f" source=console
+
+
+  Ôûê THRESHOLDS 
+
+    blocked_requests
+    Ô£ô 'count==0' count=0
+
+    dropped_iterations
+    Ô£ô 'count==0' count=0
+
+    http_req_failed
+    Ô£ô 'rate<0.01' rate=0.00%
+
+    search_ms
+    Ô£ô 'p(95)<5000' p(95)=3.76s
+
+    search_success
+    Ô£ô 'rate>0.98' rate=100.00%
+
+
+  Ôûê TOTAL RESULTS 
+
+    checks_total.......: 4962    16.510362/s
+    checks_succeeded...: 100.00% 4962 out of 4962
+    checks_failed......: 0.00%   0 out of 4962
+
+    Ô£ô search: non-empty results
+    Ô£ô search: results have score
+
+    CUSTOM
+    blocked_requests...............: 0       0/s
+    non_ok_responses...............: 0       0/s
+    search_latency.................: avg=2.07s min=101.76ms med=2.05s p(90)=3.38s p(95)=3.76s p(99)=4.61s max=18.71s
+    search_ms......................: avg=2.07s min=101.76ms med=2.05s p(90)=3.38s p(95)=3.76s p(99)=4.61s max=18.71s
+    search_result_count............: avg=10    min=10       med=10    p(90)=10    p(95)=10    p(99)=10    max=10    
+    search_server_error............: 0.00%   0 out of 2481
+    search_success.................: 100.00% 2481 out of 2481
+
+    HTTP
+    http_req_duration..............: avg=2.07s min=65.49ms  med=2.05s p(90)=3.38s p(95)=3.76s p(99)=4.61s max=18.71s
+      { expected_response:true }...: avg=2.07s min=65.49ms  med=2.05s p(90)=3.38s p(95)=3.76s p(99)=4.61s max=18.71s
+    http_req_failed................: 0.00%   0 out of 2482
+    http_reqs......................: 2482    8.258508/s
+
+    EXECUTION
+    dropped_iterations.............: 0       0/s
+    iteration_duration.............: avg=2.27s min=303.29ms med=2.25s p(90)=3.58s p(95)=3.96s p(99)=4.82s max=18.92s
+    iterations.....................: 2481    8.255181/s
+    vus............................: 6       min=1            max=30
+    vus_max........................: 30      min=30           max=30
+
+    NETWORK
+    data_received..................: 19 MB   64 kB/s
+    data_sent......................: 629 kB  2.1 kB/s
+
+
+

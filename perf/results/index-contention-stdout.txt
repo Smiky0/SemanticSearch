@@ -1,0 +1,99 @@
+time="2026-10-01T17:19:25Z" level=info msg="contention: 3 foreground VUs for 4m, indexing /host/projects/portfolio_v4 at t+45s" source=console
+time="2026-10-01T17:20:10Z" level=info msg=">>> TRIGGERING INDEX of /host/projects/portfolio_v4" source=console
+time="2026-10-01T17:20:10Z" level=info msg="index request -> 200 in 82ms" source=console
+time="2026-10-01T17:20:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/health\": request timeout"
+time="2026-10-01T17:20:40Z" level=error msg="BLOCKED GET /health (connection not established in 30s)" source=console
+time="2026-10-01T17:20:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/health\": request timeout"
+time="2026-10-01T17:20:40Z" level=error msg="BLOCKED GET /health (connection not established in 30s)" source=console
+time="2026-10-01T17:20:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/health\": request timeout"
+time="2026-10-01T17:20:40Z" level=error msg="BLOCKED GET /health (connection not established in 30s)" source=console
+time="2026-10-01T17:21:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories\": request timeout"
+time="2026-10-01T17:21:10Z" level=error msg="BLOCKED GET /api/repositories (connection not established in 30s)" source=console
+time="2026-10-01T17:21:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories\": request timeout"
+time="2026-10-01T17:21:10Z" level=error msg="BLOCKED GET /api/repositories (connection not established in 30s)" source=console
+time="2026-10-01T17:21:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories\": request timeout"
+time="2026-10-01T17:21:10Z" level=error msg="BLOCKED GET /api/repositories (connection not established in 30s)" source=console
+time="2026-10-01T17:21:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories/4963c4d4-507e-4f05-9a92-f52847c56b7f/status\": request timeout"
+time="2026-10-01T17:21:40Z" level=error msg="BLOCKED GET /api/repositories/{id}/status (connection not established in 30s)" source=console
+time="2026-10-01T17:21:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories/4963c4d4-507e-4f05-9a92-f52847c56b7f/status\": request timeout"
+time="2026-10-01T17:21:40Z" level=error msg="BLOCKED GET /api/repositories/{id}/status (connection not established in 30s)" source=console
+time="2026-10-01T17:21:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories/4963c4d4-507e-4f05-9a92-f52847c56b7f/status\": request timeout"
+time="2026-10-01T17:21:40Z" level=error msg="BLOCKED GET /api/repositories/{id}/status (connection not established in 30s)" source=console
+time="2026-10-01T17:22:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/models\": request timeout"
+time="2026-10-01T17:22:10Z" level=error msg="BLOCKED GET /api/models (connection not established in 30s)" source=console
+time="2026-10-01T17:22:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/models\": request timeout"
+time="2026-10-01T17:22:10Z" level=error msg="BLOCKED GET /api/models (connection not established in 30s)" source=console
+time="2026-10-01T17:22:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/models\": request timeout"
+time="2026-10-01T17:22:10Z" level=error msg="BLOCKED GET /api/models (connection not established in 30s)" source=console
+time="2026-10-01T17:22:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories/browse?path=/host/projects\": request timeout"
+time="2026-10-01T17:22:40Z" level=error msg="BLOCKED GET /api/repositories/browse (connection not established in 30s)" source=console
+time="2026-10-01T17:22:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories/browse?path=/host/projects\": request timeout"
+time="2026-10-01T17:22:40Z" level=error msg="BLOCKED GET /api/repositories/browse (connection not established in 30s)" source=console
+time="2026-10-01T17:22:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/repositories/browse?path=/host/projects\": request timeout"
+time="2026-10-01T17:22:40Z" level=error msg="BLOCKED GET /api/repositories/browse (connection not established in 30s)" source=console
+time="2026-10-01T17:23:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/graph/4963c4d4-507e-4f05-9a92-f52847c56b7f\": request timeout"
+time="2026-10-01T17:23:10Z" level=error msg="BLOCKED GET /api/graph/{id} (connection not established in 30s)" source=console
+time="2026-10-01T17:23:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/graph/4963c4d4-507e-4f05-9a92-f52847c56b7f\": request timeout"
+time="2026-10-01T17:23:10Z" level=error msg="BLOCKED GET /api/graph/{id} (connection not established in 30s)" source=console
+time="2026-10-01T17:23:10Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/api/graph/4963c4d4-507e-4f05-9a92-f52847c56b7f\": request timeout"
+time="2026-10-01T17:23:10Z" level=error msg="BLOCKED GET /api/graph/{id} (connection not established in 30s)" source=console
+time="2026-10-01T17:23:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/health\": request timeout"
+time="2026-10-01T17:23:40Z" level=error msg="BLOCKED GET /health (30s timeout)" source=console
+time="2026-10-01T17:23:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/health\": request timeout"
+time="2026-10-01T17:23:40Z" level=error msg="BLOCKED GET /health (30s timeout)" source=console
+time="2026-10-01T17:23:40Z" level=warning msg="Request Failed" error="Get \"http://host.docker.internal:8000/health\": request timeout"
+time="2026-10-01T17:23:40Z" level=error msg="BLOCKED GET /health (30s timeout)" source=console
+
+
+  Ôûê THRESHOLDS 
+
+    foreground_ms
+    Ô£ô 'p(95)<5000' p(95)=143.95ms
+
+    foreground_ok
+    Ô£ô 'rate>0.95' rate=98.43%
+
+
+  Ôûê TOTAL RESULTS 
+
+    checks_total.......: 1153   4.499489/s
+    checks_succeeded...: 98.43% 1135 out of 1153
+    checks_failed......: 1.56%  18 out of 1153
+
+    Ô£ù GET /health: 200
+      Ôå│  98% ÔÇö Ô£ô 189 / Ô£ù 3
+    Ô£ù GET /api/repositories: 200
+      Ôå│  98% ÔÇö Ô£ô 189 / Ô£ù 3
+    Ô£ù GET /api/repositories/{id}/status: 200
+      Ôå│  98% ÔÇö Ô£ô 189 / Ô£ù 3
+    Ô£ù GET /api/models: 200
+      Ôå│  98% ÔÇö Ô£ô 189 / Ô£ù 3
+    Ô£ù GET /api/repositories/browse: 200
+      Ôå│  98% ÔÇö Ô£ô 189 / Ô£ù 3
+    Ô£ù GET /api/graph/{id}: 200
+      Ôå│  98% ÔÇö Ô£ô 189 / Ô£ù 3
+    Ô£ô index accepted (200 or 409)
+
+    CUSTOM
+    foreground_ms..................: avg=499.18ms min=2.01ms  med=9.5ms    p(90)=80.02ms p(95)=143.95ms p(99)=29.99s   max=29.99s  
+    foreground_ok..................: 98.43% 1134 out of 1152
+    health_ok......................: 98.43% 189 out of 192
+
+    HTTP
+    http_req_duration..............: avg=498.6ms  min=2.01ms  med=9.54ms   p(90)=81.35ms p(95)=143.85ms p(99)=29.99s   max=29.99s  
+      { expected_response:true }...: avg=31.16ms  min=2.01ms  med=9.11ms   p(90)=67.18ms p(95)=122.9ms  p(99)=325.13ms max=766.08ms
+    http_req_failed................: 1.56%  21 out of 1346
+    http_reqs......................: 1346   5.252656/s
+
+    EXECUTION
+    iteration_duration.............: avg=3.97s    min=86.13ms med=615.85ms p(90)=1.01s   p(95)=1.46s    p(99)=3m30s    max=3m30s   
+    iterations.....................: 193    0.753167/s
+    vus............................: 2      min=2            max=3
+    vus_max........................: 4      min=4            max=4
+
+    NETWORK
+    data_received..................: 11 MB  44 kB/s
+    data_sent......................: 145 kB 566 B/s
+
+
+

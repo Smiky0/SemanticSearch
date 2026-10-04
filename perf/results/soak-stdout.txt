@@ -1,0 +1,47 @@
+time="2026-10-01T17:42:27Z" level=info msg="resolved repository 4963c4d4-507e-4f05-9a92-f52847c56b7f (/host/projects/Semantic-Code-Search, 291 symbols)" source=console
+time="2026-10-01T17:42:27Z" level=info msg="soak: 10 VUs for 10m" source=console
+
+
+  Ôûê THRESHOLDS 
+
+    blocked_requests
+    Ô£ô 'count==0' count=0
+
+    soak_ms
+    Ô£ô 'p(95)<15000' p(95)=2.3s
+
+    soak_success
+    Ô£ô 'rate>0.98' rate=100.00%
+
+
+  Ôûê TOTAL RESULTS 
+
+    checks_total.......: 4727    7.871775/s
+    checks_succeeded...: 100.00% 4727 out of 4727
+    checks_failed......: 0.00%   0 out of 4727
+
+    Ô£ô soak: search 200
+
+    CUSTOM
+    blocked_requests...............: 0       0/s
+    soak_ms........................: avg=968.44ms min=216.97ms med=751.27ms p(90)=1.91s p(95)=2.3s p(99)=2.89s max=3.95s
+    soak_success...................: 100.00% 4727 out of 4727
+
+    HTTP
+    http_req_duration..............: avg=968.24ms min=4.91ms   med=751.21ms p(90)=1.91s p(95)=2.3s p(99)=2.89s max=3.95s
+      { expected_response:true }...: avg=968.24ms min=4.91ms   med=751.21ms p(90)=1.91s p(95)=2.3s p(99)=2.89s max=3.95s
+    http_req_failed................: 0.00%   0 out of 4728
+    http_reqs......................: 4728    7.87344/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.26s    min=517.95ms med=1.05s    p(90)=2.21s p(95)=2.6s p(99)=3.2s  max=4.25s
+    iterations.....................: 4727    7.871775/s
+    vus............................: 10      min=10           max=10
+    vus_max........................: 10      min=10           max=10
+
+    NETWORK
+    data_received..................: 658 kB  1.1 kB/s
+    data_sent......................: 1.1 MB  1.9 kB/s
+
+
+

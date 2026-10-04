@@ -1,0 +1,3 @@
+# Raw k6 samples are large (~120 MB across a full suite) and regenerable.
+# Summaries and stdout are kept — they are the durable result of a run.
+*-raw.json

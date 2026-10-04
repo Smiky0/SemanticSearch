@@ -1,0 +1,45 @@
+
+
+  █ THRESHOLDS 
+
+    blocked_requests
+    ✓ 'count==0' count=0
+
+    spike_ms
+    ✓ 'p(95)<20000' p(95)=3.83s
+
+    spike_success
+    ✓ 'rate>0.90' rate=100.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 4582    18.316712/s
+    checks_succeeded...: 100.00% 4582 out of 4582
+    checks_failed......: 0.00%   0 out of 4582
+
+    ✓ spike: search 200
+
+    CUSTOM
+    blocked_requests...............: 0       0/s
+    spike_ms.......................: avg=1.86s med=2.52s p(90)=3.31s p(95)=3.83s p(99)=5.21s max=7.88s
+    spike_success..................: 100.00% 4582 out of 4582
+
+    HTTP
+    http_req_duration..............: avg=1.86s med=2.52s p(90)=3.31s p(95)=3.83s p(99)=5.2s  max=7.88s
+      { expected_response:true }...: avg=1.86s med=2.52s p(90)=3.31s p(95)=3.83s p(99)=5.2s  max=7.88s
+    http_req_failed................: 0.00%   0 out of 4583
+    http_reqs......................: 4583    18.320709/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.96s med=2.62s p(90)=3.41s p(95)=3.94s p(99)=5.31s max=7.98s
+    iterations.....................: 4582    18.316712/s
+    vus............................: 5       min=5            max=60
+    vus_max........................: 60      min=60           max=60
+
+    NETWORK
+    data_received..................: 41 MB   163 kB/s
+    data_sent......................: 1.1 MB  4.4 kB/s
+
+
+

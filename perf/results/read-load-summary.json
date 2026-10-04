@@ -1,0 +1,204 @@
+{
+    "metrics": {
+        "http_req_sending": {
+            "avg": 0.031432267293336966,
+            "min": 0.005801,
+            "med": 0.017201,
+            "p(90)": 0.055405,
+            "p(95)": 0.0628048,
+            "p(99)": 0.14491079999999992,
+            "max": 8.405716
+        },
+        "http_req_waiting": {
+            "med": 200.26018,
+            "p(90)": 1084.22957,
+            "p(95)": 1664.9196785999998,
+            "p(99)": 3156.8460151999984,
+            "max": 10005.759332,
+            "avg": 433.23487663677093,
+            "min": 2.65002
+        },
+        "vus_max": {
+            "value": 50,
+            "min": 50,
+            "max": 50
+        },
+        "http_req_blocked": {
+            "min": 0.002,
+            "med": 0.006001,
+            "p(90)": 0.009301,
+            "p(95)": 0.010902799999999999,
+            "p(99)": 0.04623515999999997,
+            "max": 32.678567,
+            "avg": 0.027626115454796832
+        },
+        "iteration_duration": {
+            "avg": 2814.334821410422,
+            "min": 430.181892,
+            "med": 2411.706722,
+            "p(90)": 4768.624952100002,
+            "p(95)": 5889.666938849999,
+            "p(99)": 8696.980109079996,
+            "max": 12588.89618
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "max": 0
+        },
+        "read_success": {
+            "passes": 18084,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "http_req_receiving": {
+            "med": 0.103408,
+            "p(90)": 7.4947966,
+            "p(95)": 11.765612599999992,
+            "p(99)": 24.269705199999994,
+            "max": 116.95303,
+            "avg": 1.9359601566491487,
+            "min": 0.021702
+        },
+        "vus": {
+            "value": 11,
+            "min": 1,
+            "max": 50
+        },
+        "data_received": {
+            "count": 178369222,
+            "rate": 593349.0234087999
+        },
+        "http_req_duration": {
+            "med": 200.968879,
+            "p(90)": 1089.1986648000002,
+            "p(95)": 1672.6044357999992,
+            "p(99)": 3171.23935628,
+            "max": 10005.799036,
+            "avg": 435.2022690607138,
+            "min": 2.830535
+        },
+        "data_sent": {
+            "rate": 6687.754930482742,
+            "count": 2010435
+        },
+        "http_req_connecting": {
+            "max": 32.526057,
+            "avg": 0.01847547520044236,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0
+        },
+        "read_ms": {
+            "avg": 435.21999360805177,
+            "min": 2.830535,
+            "med": 200.9791505,
+            "p(90)": 1089.2265076000003,
+            "p(95)": 1672.6492845999987,
+            "p(99)": 3171.254867359997,
+            "max": 10005.799036,
+            "thresholds": {
+                "p(95)<500": true
+            }
+        },
+        "blocked_requests": {
+            "count": 0,
+            "rate": 0,
+            "thresholds": {
+                "count==0": false
+            }
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 435.2022690607138,
+            "min": 2.830535,
+            "med": 200.968879,
+            "p(90)": 1089.1986648000002,
+            "p(95)": 1672.6044357999992,
+            "p(99)": 3171.23935628,
+            "max": 10005.799036
+        },
+        "iterations": {
+            "count": 3014,
+            "rate": 10.026135319209516
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 18085,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_reqs": {
+            "count": 18085,
+            "rate": 60.160138436597244
+        },
+        "checks": {
+            "passes": 18084,
+            "fails": 0,
+            "value": 1
+        }
+    },
+    "setup_data": {
+        "repoId": "4963c4d4-507e-4f05-9a92-f52847c56b7f"
+    },
+    "root_group": {
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "GET /health: 200": {
+                    "name": "GET /health: 200",
+                    "path": "::GET /health: 200",
+                    "id": "3c53818a44af464da86f83629bcc5a05",
+                    "passes": 3014,
+                    "fails": 0
+                },
+                "GET /api/repositories: 200": {
+                    "name": "GET /api/repositories: 200",
+                    "path": "::GET /api/repositories: 200",
+                    "id": "94c33a1685918fcd2e36fa34dae2d2a8",
+                    "passes": 3014,
+                    "fails": 0
+                },
+                "GET /api/repositories/{id}/status: 200": {
+                    "name": "GET /api/repositories/{id}/status: 200",
+                    "path": "::GET /api/repositories/{id}/status: 200",
+                    "id": "5fb5b69b0b6614abbbde37d12a2e112e",
+                    "passes": 3014,
+                    "fails": 0
+                },
+                "GET /api/models: 200": {
+                    "path": "::GET /api/models: 200",
+                    "id": "1bfad812fe6ca56994d20c641807a1af",
+                    "passes": 3014,
+                    "fails": 0,
+                    "name": "GET /api/models: 200"
+                },
+                "GET /api/repositories/browse: 200": {
+                    "passes": 3014,
+                    "fails": 0,
+                    "name": "GET /api/repositories/browse: 200",
+                    "path": "::GET /api/repositories/browse: 200",
+                    "id": "df1b6be49becca0e5022bc6493ffc8d8"
+                },
+                "GET /api/graph/{id}: 200": {
+                    "id": "5baf14146e08191f3f654ea52be6c5d6",
+                    "passes": 3014,
+                    "fails": 0,
+                    "name": "GET /api/graph/{id}: 200",
+                    "path": "::GET /api/graph/{id}: 200"
+                }
+            },
+        "name": ""
+    }
+}

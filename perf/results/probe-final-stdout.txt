@@ -1,0 +1,38 @@
+
+
+  â–ˆ THRESHOLDS 
+
+    checks
+    âœ— 'rate==1' rate=83.33%
+
+
+  â–ˆ TOTAL RESULTS 
+
+    checks_total.......: 6      231.562502/s
+    checks_succeeded...: 83.33% 5 out of 6
+    checks_failed......: 16.66% 1 out of 6
+
+    âœ“ container http://backend:8000/health: reachable
+    âœ“ container http://backend:8000/api/repositories: reachable
+    âœ“ host     http://host.docker.internal:8000/health: reachable
+    âœ“ host     http://host.docker.internal:8000/api/repositories: reachable
+    âœ“ container target serves the expected app
+    âœ— host port serves the expected app
+      â†³  0% â€” âœ“ 0 / âœ— 1
+
+    HTTP
+    http_req_duration..............: avg=2.48ms  min=1.27ms  med=1.74ms  max=5.28ms  p(90)=4.33ms  p(95)=4.81ms 
+      { expected_response:true }...: avg=2.48ms  min=1.27ms  med=1.74ms  max=5.28ms  p(90)=4.33ms  p(95)=4.81ms 
+    http_req_failed................: 0.00% 0 out of 6
+    http_reqs......................: 6     231.562502/s
+
+    EXECUTION
+    iteration_duration.............: avg=25.75ms min=25.75ms med=25.75ms max=25.75ms p(90)=25.75ms p(95)=25.75ms
+    iterations.....................: 1     38.59375/s
+
+    NETWORK
+    data_received..................: 53 kB 2.0 MB/s
+    data_sent......................: 515 B 20 kB/s
+
+
+

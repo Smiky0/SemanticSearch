@@ -1,0 +1,57 @@
+
+
+  â–ˆ THRESHOLDS 
+
+    blocked_requests
+    âœ“ 'count==0' count=0
+
+    dropped_iterations
+    âœ“ 'count==0' count=0
+
+    http_req_failed
+    âœ“ 'rate<0.01' rate=0.00%
+
+    search_ms
+    âœ“ 'p(95)<5000' p(95)=1.38s
+
+    search_success
+    âœ“ 'rate>0.98' rate=100.00%
+
+
+  â–ˆ TOTAL RESULTS 
+
+    checks_total.......: 12368   41.190065/s
+    checks_succeeded...: 100.00% 12368 out of 12368
+    checks_failed......: 0.00%   0 out of 12368
+
+    âœ“ search: non-empty results
+    âœ“ search: results have score
+
+    CUSTOM
+    blocked_requests...............: 0       0/s
+    non_ok_responses...............: 0       0/s
+    search_latency.................: avg=710.17ms min=48.83ms  med=648.48ms p(90)=1.27s p(95)=1.38s p(99)=1.56s max=2.27s
+    search_ms......................: avg=710.17ms min=48.83ms  med=648.48ms p(90)=1.27s p(95)=1.38s p(99)=1.56s max=2.27s
+    search_result_count............: avg=10       min=10       med=10       p(90)=10    p(95)=10    p(99)=10    max=10   
+    search_server_error............: 0.00%   0 out of 6184
+    search_success.................: 100.00% 6184 out of 6184
+
+    HTTP
+    http_req_duration..............: avg=710.05ms min=3.85ms   med=648.44ms p(90)=1.27s p(95)=1.38s p(99)=1.56s max=2.27s
+      { expected_response:true }...: avg=710.05ms min=3.85ms   med=648.44ms p(90)=1.27s p(95)=1.38s p(99)=1.56s max=2.27s
+    http_req_failed................: 0.00%   0 out of 6185
+    http_reqs......................: 6185    20.598363/s
+
+    EXECUTION
+    dropped_iterations.............: 0       0/s
+    iteration_duration.............: avg=911.59ms min=250.54ms med=850.21ms p(90)=1.47s p(95)=1.58s p(99)=1.76s max=2.47s
+    iterations.....................: 6184    20.595033/s
+    vus............................: 6       min=1            max=30
+    vus_max........................: 30      min=30           max=30
+
+    NETWORK
+    data_received..................: 54 MB   180 kB/s
+    data_sent......................: 1.5 MB  4.9 kB/s
+
+
+

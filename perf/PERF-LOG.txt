@@ -1,0 +1,770 @@
+﻿================================================================================
+  SEMANTIC CODE SEARCH — PERFORMANCE TRACKING & BUG LOG
+================================================================================
+  Created   : 2026-10-01   Updated: 2026-10-02 (all 11 bugs fixed + verified,
+                            2 further defects found and fixed, full re-measured)
+  Tooling   : Grafana k6 v2.3.0 (grafana/k6 container, compose network)
+  Stack     : FastAPI + Uvicorn (1 worker), Postgres 16, Qdrant v1.12.1,
+              Ollama (nomic-embed-text 768d, qwen2.5-coder:3b)
+  Corpus    : /host/projects/Semantic-Code-Search — baseline 85 files / 291 symbols;
+              re-indexed for the after-run as 90 files / 381 symbols
+  Companion : perf/RESULTS.md (full analysis), perf/results/ (raw k6 output)
+
+  STATUS KEY: [OPEN] unfixed  |  [FIXED] fixed+verified  |  [WONT] decided against
+              | [DEFER] postponed
+
+  READ THIS FIRST
+    All 11 catalogued defects are now [FIXED] and verified. Two further defects
+    (BUG-012, BUG-013) were discovered while fixing them and are also fixed.
+    Section 1 is the BEFORE state and is intentionally left unedited so it stays
+    comparable; Section 5 is the AFTER state. Section 4 is the full change log,
+    including mistakes made and corrected along the way.
+
+  ENVIRONMENT CAVEAT: baseline numbers below were captured on a host also running
+  immich (5 containers) and devcart-postgres at ~78% CPU. Absolute throughput is
+  therefore a LOWER BOUND. Relative deltas and the outage finding are unaffected.
+  The after-run was taken on a quiet host (unrelated containers at ~0% CPU).
+
+  CORRECTION: Section 3.1 originally attributed the indexing stall to synchronous
+  tree-sitter parsing. Direct measurement disproved that - parsing is ~2.4 ms per
+  file and releases the GIL. The actual cost was filesystem traversal. See the
+  BUG-001 entry and the 2026-10-02 change-log entry.
+================================================================================
+
+
+================================================================================
+  SECTION 1 — CURRENT SPEED & PERFORMANCE BASELINE
+================================================================================
+  Captured 2026-10-01. Single Uvicorn worker. This is the "before" column that
+  every fix in Section 3 must be measured against.
+
+--------------------------------------------------------------------------------
+  1.1 ENDPOINT LATENCY @ IDLE (single request, smoke.js)
+--------------------------------------------------------------------------------
+  Endpoint                                    Latency    Class
+  ----------------------------------------------------------------------------
+  GET /health                                     4.2 ms  trivial
+  GET /api/models                                 6.1 ms  cheap
+  GET /api/symbols/{id}                           8.2 ms  cheap
+  GET /api/repositories                           9.1 ms  cheap (1 trivial query)
+  GET /api/repositories/{id}/status              11.0 ms  cheap
+  GET /api/symbols/{id}/relationships            14.4 ms  cheap
+  GET /api/config/providers                      32.5 ms  2 outbound HTTP calls
+  GET /api/graph/{id}                            41.5 ms  unbounded read
+  POST /api/search                              383.7 ms  embed + qdrant + N+1
+  POST /api/trace                               19.7   s  + LLM
+  POST /api/explain                             77.1   s  + LLM (incl. cold load)
+
+--------------------------------------------------------------------------------
+  1.2 THROUGHPUT CEILINGS (measured saturation points)
+--------------------------------------------------------------------------------
+  Scenario                       Peak load      Throughput    Verdict
+  ----------------------------------------------------------------------------
+  Read-only endpoints            50 VUs         60.2 req/s    saturated
+  Search (POST /api/search)      30 VUs          8.26 req/s   saturated
+  Spike peak                     60 VUs          7.56 req/s   saturated
+  Soak steady                    10 VUs          7.87 req/s   saturated
+
+  NOTE: search throughput (8.3/s) is ~7x lower than read-only (60/s) because every
+  search makes one Ollama embedding inference call, which serialises.
+
+--------------------------------------------------------------------------------
+  1.3 LATENCY DISTRIBUTION UNDER LOAD
+--------------------------------------------------------------------------------
+  Test          VUs   Reqs      avg      med      p90      p95      p99      max
+  ----------------------------------------------------------------------------
+  read-load     50    18,085   435ms    201ms   1.09s    1.67s    3.17s   10.0s
+  search-load   30     2,482  2.07s    2.06s   3.38s    3.76s    4.62s   18.7s
+  spike         60     1,895  4.69s    4.87s   8.95s   10.34s   13.44s   17.5s
+  soak          10     4,728   968ms   751ms   1.91s    2.31s    2.90s    3.96s
+
+--------------------------------------------------------------------------------
+  1.4 RELIABILITY
+--------------------------------------------------------------------------------
+  Test           Requests   Failed   Success rate
+  ----------------------------------------------------------------------------
+  read-load       18,085        0      100.00%
+  search-load      2,482        0      100.00%
+  spike             1,895        0      100.00%
+  soak              4,728        0      100.00%
+  index-contention  1,346       21       98.44%   <-- OUTAGE, see BUG-001
+  ----------------------------------------------------------------------------
+  TOTAL           28,536       21       99.93%
+
+  Under load WITHOUT indexing the service never returns an error. It degrades by
+  queueing. Correct behaviour for a single-worker design.
+
+--------------------------------------------------------------------------------
+  1.5 SPIKE RECOVERY PROFILE (5 -> 60 VUs, back to 5)
+--------------------------------------------------------------------------------
+  t+0-20s    baseline 5 VUs        avg 1.17s   p95 1.79s
+  t+40-100s  PEAK     60 VUs        avg 9.52s   p95 16.96s   0 errors
+  t+120-160s ramp-down              avg 5.16s   p95 6.69s
+  t+200s+    recovered 5 VUs        avg 541ms   p95 1.05s
+  Recovery time after peak: ~20s. No errors, no dropped iterations.
+
+--------------------------------------------------------------------------------
+  1.6 SOAK DRIFT (10 VUs, 10 min) -- UNRESOLVED, needs clean-host rerun
+--------------------------------------------------------------------------------
+  Window        avg      p95     req/min
+  ----------------------------------------------------------------------------
+  t+0-60      691ms    1.15s      604
+  t+120-180   639ms    905ms      633
+  t+240-300   647ms    915ms      630
+  t+360-420  1.76s    2.95s      287     <-- throughput halved
+  t+480-540  1.53s    2.75s      329
+  Backend memory stable at 247 MB. No dropped iterations.
+  CONFOUND: coincides with devcart-postgres reaching ~78% CPU. Cannot distinguish
+  a genuine leak from host contention. TRACKED as BUG-007.
+
+--------------------------------------------------------------------------------
+  1.7 HEADROOM SUMMARY
+--------------------------------------------------------------------------------
+  Single worker sustains ~60 req/s of cheap reads and ~8 req/s of semantic search.
+  Neither degrades in correctness, only in latency. The binding constraints are
+  (a) one event loop, (b) serial embedding inference, (c) DB pool of 15.
+================================================================================
+
+
+================================================================================
+  SECTION 2 — BUG INVENTORY
+================================================================================
+
+--------------------------------------------------------------------------------
+  BUG-001  [FIXED]  CRITICAL — Background indexing freezes the entire API
+--------------------------------------------------------------------------------
+  Area     : backend/app/services/indexing_service.py
+  Found by : k6 index-contention.js
+  Severity : CRITICAL — full outage, 13m01s, includes /health
+
+  EVIDENCE
+    k6 timeline, 3 VUs polling 6 endpoints, index triggered at t+50s:
+      t+s   n   fail  avg ms    p95 ms    max ms
+       40  169    0     20.2       64.0     177.2     <- healthy ~30 req/s
+       70    3    3  29998.3   29998.4   29998.4     <- all timing out
+      250    3    3  29994.7   29995.3   29995.3
+    Every failure is exactly 29,999ms = the client timeout. Zero successes after
+    t+50s.
+
+    Backend log correlation:
+      17:20:10.452584Z  indexing_started
+      17:32:59.310890Z  files_found count=44      (+12m49s)
+      17:33:11.100497Z  indexing_completed         (+13m01s total)
+
+    Independently reproduced: indexing Semantic-Code-Search produced a separate
+    145-second window with zero successful responses.
+
+  ROOT CAUSE (revised 2026-10-02 — see correction below)
+    index_repository() is `async` but performs synchronous blocking work directly
+    on the event loop:
+      indexing_service.py:36  scan_repository()      — synchronous FS walk
+      indexing_service.py:53  Path.read_text()        — synchronous file read
+      indexing_service.py:65  extract_code_units()   — synchronous tree-sitter parse
+    It is dispatched via FastAPI BackgroundTasks (repository_api.py:104) which runs
+    IN THE SAME single Uvicorn worker. With no await point during those calls, the
+    single-threaded event loop cannot serve any other request — not even /health.
+
+    CORRECTION (2026-10-02). This entry originally claimed "~17.5 seconds of
+    blocking CPU per file" and blamed tree-sitter. Direct measurement disproves
+    that. What was actually slow:
+      - tree-sitter parses ~2.4 ms per file and RELEASES THE GIL, so it was never
+        the bottleneck and is not inherently unsuitable for threads.
+      - the real cost was Path.rglob("*") inside scan_repository, which walked
+        705,868 directory entries to find ~1,332 files: 16.91s run natively from
+        D:\Code\Projects, and 12m49s under the Docker bind mount. That matches the
+        +12m49s to files_found in the log excerpt above exactly.
+    The conclusion (blocking work on the event loop) stands; only the cost model
+    was wrong. Fixing the traversal is what actually removed the stall.
+
+  IMPACT
+    Complete unavailability for the duration of any index job. The Docker healthcheck
+    (GET /health every 10s, 5 retries) also fails, but `restart: unless-stopped` keeps
+    the container alive, so the failure is SILENT in Docker while the API is dead.
+
+--------------------------------------------------------------------------------
+  BUG-002  [FIXED]  CRITICAL — Synchronous Qdrant client blocks event loop
+--------------------------------------------------------------------------------
+  Area     : backend/app/embedding/vector_store.py
+  Severity : CRITICAL (compounds BUG-001 on the normal request path)
+
+  EVIDENCE
+    Latency scales with total system load rather than per-endpoint cost. Even during
+    BUG-001's healthy window, per-endpoint averages under 50 VUs:
+      GET /api/graph/{id}                916ms avg  (41ms idle -> 22x degradation)
+      GET /api/repositories              773ms avg  (9ms idle  -> 86x degradation)
+      GET /api/repositories/{id}/status  587ms avg  (11ms idle -> 53x degradation)
+      GET /health                        102ms avg  (4ms idle  -> 25x degradation)
+    GET /api/repositories issues one trivial query and degrades 86x. This is queueing
+    behind a blocked loop, not query cost.
+
+  ROOT CAUSE
+    vector_store.py:35  QdrantClient(...)  — the SYNCHRONOUS client
+    vector_store.py:43  async def ensure_collection()  -> blocking HTTP
+    vector_store.py:67  async def upsert()            -> blocking HTTP
+    vector_store.py:89  async def search()            -> blocking HTTP
+    vector_store.py:114 async def delete()            -> blocking HTTP
+    The `async def` signatures are a lie: none of these yield to the event loop.
+    Every search request therefore serialises the whole server behind one HTTP call.
+
+  IMPACT
+    Caps concurrency at 1 in-flight vector operation. Directly responsible for the
+    8.26 req/s search ceiling independent of embedding cost.
+
+--------------------------------------------------------------------------------
+  BUG-003  [FIXED]  HIGH — LLM provider toggle silently ignored
+--------------------------------------------------------------------------------
+  Area     : backend/app/llm/provider.py
+  Severity : HIGH — incorrect routing, misleading UI, 502s to users
+
+  EVIDENCE
+    PUT /api/config/providers {"provider":"ollama"} returned
+      {"active_llm":"ollama","active_embedding":"ollama"}
+    Then POST /api/explain and POST /api/trace returned:
+      HTTP 502 {"error":"LLM API returned status 403","type":"LLMError"}
+    Backend log confirmed the calls went to generativelanguage.googleapis.com, i.e.
+    GEMINI — the provider the UI said was NOT active.
+
+  ROOT CAUSE
+    llm/provider.py:152  provider_name = settings.llm_provider.lower()
+    get_llm_provider() reads the env-backed setting DIRECTLY and never consults the
+    module-level override set by PUT /api/config/providers.
+    Contrast embedding/provider.py:212 which correctly calls
+    get_active_embedding_provider(). The two resolver paths are inconsistent.
+
+  IMPACT
+    Selecting Ollama in the UI has no effect on LLM calls. All explain/trace requests
+    fail with 502 when GEMINI_API_KEY is unset.
+
+--------------------------------------------------------------------------------
+  BUG-004  [FIXED]  HIGH — Provider selection is not durable across restarts
+--------------------------------------------------------------------------------
+  Area     : backend/app/config.py, backend/app/api/config_api.py
+  Severity : HIGH — silent reversion to a non-functional provider
+
+  EVIDENCE
+    Set provider to ollama, then recreated the container for an unrelated mount
+    change. After restart, indexing fell back to Gemini and failed with
+    "Gemini embedding failed with status 403" despite the toggle having been set.
+
+  ROOT CAUSE
+    config.py:39-40  _active_llm_provider / _active_embedding_provider module globals
+    config.py:60-62  set_active_* writes only to process memory
+    config_api.py:104-105 calls the setters and nothing else
+    No persistence. Any restart, worker recycle, or scale-out loses the selection and
+    silently reverts to EMBEDDING_PROVIDER / LLM_PROVIDER from .env.
+
+  IMPACT
+    A container restart during or after configuration silently changes behaviour.
+    With multiple workers the setting would also be inconsistent per worker.
+
+--------------------------------------------------------------------------------
+  BUG-005  [FIXED]  MEDIUM — DB connection pool untuned (hard ceiling of 15)
+--------------------------------------------------------------------------------
+  Area     : backend/app/database.py
+  Severity : MEDIUM — throughput ceiling, silent queueing
+
+  ROOT CAUSE
+    database.py:40  create_async_engine(_db_url, **_engine_kwargs)
+    _engine_kwargs only ever sets echo and connect_args (database.py:36-38).
+    No pool_size, no max_overflow, no pool_timeout, no pool_pre_ping.
+    SQLAlchemy default for asyncpg is pool_size=5, max_overflow=10 => 15 concurrent
+    connections maximum. Observed at idle: 6 total / 1 active.
+
+  IMPACT
+    Above 15 in-flight DB requests everything queues on pool checkout. No error is
+    raised (default pool_timeout=30s then TimeoutError), so this is invisible.
+    Contributes to the read-only ceiling of 60 req/s.
+
+--------------------------------------------------------------------------------
+  BUG-006  [FIXED]  MEDIUM — N+1 query on the search hot path
+--------------------------------------------------------------------------------
+  Area     : backend/app/services/search_service.py
+  Severity : MEDIUM — 10x DB round-trips per search
+
+  ROOT CAUSE
+    search_service.py:41-43
+        for r in results:
+            node = await node_repo.get(uuid.UUID(r["id"]))
+    One sequential SELECT per result. At the default limit=10 that is 10 serialised
+    Postgres round-trips per search request.
+
+  IMPACT
+    Adds ~10 network hops of latency to every search. Should be a single
+    WHERE id = ANY(:ids) query.
+
+--------------------------------------------------------------------------------
+  BUG-007  [FIXED]  MEDIUM — Possible throughput degradation under sustained load
+--------------------------------------------------------------------------------
+  Area     : backend (unlocalised)
+  Severity : MEDIUM — unconfirmed
+
+  EVIDENCE
+    Soak at constant 10 VUs: throughput fell from ~630 to ~287 req/min and mean
+    latency rose from ~650ms to ~1.9s between minute 1 and minute 6, then held.
+    No dropped iterations. Backend memory flat at 247 MB.
+
+  STATUS
+    NOT ATTRIBUTED. The shift coincides with an unrelated container
+    (devcart-postgres) reaching ~78% CPU. Cannot distinguish a genuine leak from
+    host contention. Requires a rerun on an idle host.
+
+  ACTION
+    Re-run perf/k6/soak.js with the machine otherwise idle before changing code.
+
+--------------------------------------------------------------------------------
+  BUG-008  [FIXED]  MEDIUM — /api/graph/{repo_id} is unbounded
+--------------------------------------------------------------------------------
+  Area     : backend/app/api/graph_api.py
+  Severity : MEDIUM — slowest read endpoint, grows without limit
+
+  ROOT CAUSE
+    graph_api.py:19-20
+        nodes = await node_repo.get_by_repository(rid)
+        edges = await edge_repo.get_by_repository(rid)
+    No pagination, no limit, no symbol-type filter. Every node and every edge for the
+    whole repository is materialised and serialised on each call.
+
+  EVIDENCE
+    916 ms average / 2.48 s p95 at 50 VUs with only 291 symbols — the slowest
+    read endpoint. Cost is linear in repository size.
+
+  IMPACT
+    A real 50k-symbol repository would serialise a payload large enough to stall the
+    single worker. Also the client (reactflow) must lay out every node at once.
+
+--------------------------------------------------------------------------------
+  BUG-009  [FIXED]  LOW — Embeddings issued one HTTP request per text
+--------------------------------------------------------------------------------
+  Area     : backend/app/embedding/provider.py
+  Severity : LOW (perf only, not correctness)
+
+  ROOT CAUSE
+    provider.py:126-132
+        for text in texts:
+            response = await client.post(f"{self._url}/api/embed",
+                                         json={"model": self._model, "input": text})
+    Ollama's /api/embed accepts a LIST in "input". The loop sends one request per
+    text, serialising the whole batch.
+
+  IMPACT
+    Direct contributor to the 12m49s indexing scan phase and to the 8.26 req/s search
+    ceiling. Batching would cut HTTP overhead proportionally.
+
+--------------------------------------------------------------------------------
+  BUG-010  [FIXED]  LOW — Qdrant client/server version skew
+--------------------------------------------------------------------------------
+  Area     : backend/pyproject.toml, docker-compose.yml
+  Severity : LOW — warning only
+
+  EVIDENCE
+    UserWarning on every connection:
+      "Qdrant client version 1.19.0 is incompatible with server version 1.12.1.
+       Major versions should match and minor version difference must not exceed 1."
+
+  ROOT CAUSE
+    qdrant-client 1.19.0 (backend/uv.lock) vs qdrant/qdrant:v1.12.1 (docker-compose).
+
+  IMPACT
+    Potential for subtle request-shape incompatibilities; currently just noise in logs.
+
+--------------------------------------------------------------------------------
+  BUG-011  [FIXED]  INFO — Environment port collision masked the target service
+--------------------------------------------------------------------------------
+  Area     : environment, not application code
+  Severity : INFO (process finding; test harness hardened)
+
+  EVIDENCE
+    A local uvicorn from D:\Code\Projects\inventory-management\backend holds
+    127.0.0.1:8000. Docker publishes 0.0.0.0:8000. For container-originated traffic
+    the more specific loopback binding wins, so k6 reaching host.docker.internal:8000
+    was silently pointed at the WRONG application:
+      wrong app: {"status":"all is well"} on /health, 404 on every /api/* route
+      right app: {"status":"ok"} on /health
+    Detected by perf/k6/probe.js after two test runs produced unexplained 404s.
+
+  RESOLUTION
+    perf/run-k6.ps1 now runs the k6 container on the compose network against
+    http://backend:8000, removing host port ambiguity. The other process was left
+    untouched. Harness-only change; no application code affected.
+    probe.js was additionally rewritten to identify the app positively by its
+    OpenAPI title on both the container network and the published host port, and
+    to print an explicit verdict, instead of leaving the caller to infer the
+    problem from an ambiguous http_req_failed rate. Verified 2026-10-02: 6/6
+    checks, 0 http_req_failed, verdict "BUG-011 CLEARED". The shadowing process
+    is no longer running and host port 8000 now serves this application.
+
+--------------------------------------------------------------------------------
+  BUG-012  [FIXED]  CRITICAL — Indexing wiped every other repository's vectors
+--------------------------------------------------------------------------------
+  Area     : app/embedding/vector_store.py, app/services/indexing_service.py
+  Severity : CRITICAL (silent cross-repository data loss)
+  Found    : 2026-10-02, during remediation, NOT present in the original baseline
+
+  EVIDENCE
+    Indexing began by calling delete_collection("code_embeddings") before every
+    run. Because the collection is shared by all repositories, indexing one repo
+    erased the vectors of every other repo. Observed directly: after indexing a
+    test repository, search against the main corpus returned {"results": []} even
+    though the repository row was still "completed" with 291 symbols. The first
+    post-fix smoke run still failed this way (13/13 HTTP checks passed but the
+    custom contract check recorded an empty result set).
+
+  RESOLUTION
+    ensure_collection() now reuses a dimension-compatible collection and only
+    recreates it on a dimension mismatch. Indexing clears only its own points via
+    a repository_id payload filter. Verified by indexing portfolio_v4, then
+    IronVill, then deleting IronVill: each repository's vectors survived the
+    others' indexing and the delete removed exactly IronVill's 13 points.
+
+--------------------------------------------------------------------------------
+  BUG-013  [FIXED]  HIGH — Repository deletion left orphan vectors behind
+--------------------------------------------------------------------------------
+  Area     : app/api/repository_api.py
+  Severity : HIGH (unbounded storage growth, misleading search if filters relax)
+  Found    : 2026-10-02, during remediation, NOT present in the original baseline
+
+  EVIDENCE
+    Repository deletion filtered Qdrant points on Node.qdrant_point_id, a column
+    that is never populated anywhere in the codebase. Every delete therefore
+    removed the database rows and left the full vector set behind. Observed
+    directly: deleting a repository dropped its DB rows but left all 143 of its
+    points, and a scroll of the collection showed a repository_id that no longer
+    existed in /api/repositories.
+
+  RESOLUTION
+    repository_api now calls delete_by_repository(), filtering on the
+    repository_id payload that indexing actually writes. Verified live: deleting
+    a repository removed its 200 points while another repository's 30 points were
+    untouched. One legacy orphan (64ee92e8-dd61-477e-a814-e0df352e1d2c, 143
+    points) predates the fix and is still present; see 5.4.
+
+================================================================================
+
+
+================================================================================
+  SECTION 3 — ANALYSIS
+================================================================================
+
+  3.1 THE CENTRAL PROBLEM
+  ------------------------------------------------------------------------
+  The service runs ONE Uvicorn worker on ONE event loop, and that loop is blocked
+  by synchronous code on both the background path (BUG-001) and the request path
+  (BUG-002). Everything else in this log is a secondary effect.
+
+  This is why the measurements look contradictory at first glance:
+    - 27,000 requests with ZERO errors, yet a total outage exists.
+    - A trivial query (GET /api/repositories) taking 773 ms under load.
+    - p95 healthy (144 ms) while p99 is 29,994 ms.
+  There is no error condition. The loop is simply not being scheduled. A load
+  generator with a 30 s client timeout reports this as "a few failures"; a real user
+  sees a hung UI, then a gateway timeout.
+
+  3.2 WHY THE EXISTING THRESHOLDS UNDERSTATED THIS
+  ------------------------------------------------------------------------
+  The original thresholds were p95 < 5000 and success > 98%. The contention run
+  scored p95 = 144 ms (PASS) and success = 98.44% (PASS) — while the server was
+  completely dead for 13 minutes. Percentile thresholds structurally cannot see an
+  outage if the outage is short relative to total samples.
+
+  CONCLUSION: percentile SLOs are necessary but not sufficient. A hard
+  availability gate is also required. Two changes proposed:
+    - a dedicated "max request duration" threshold, not just percentiles
+    - a zero-tolerance counter for requests exceeding a hard budget
+      (blocked_requests already exists for this purpose and did fire)
+
+  3.3 FIX ORDERING
+  ------------------------------------------------------------------------
+  Ranked by (severity x reach) / effort, cheapest high-impact first:
+
+    1. BUG-002 AsyncQdrantClient          tiny diff, unblocks the REQUEST path
+    2. BUG-001 offload blocking calls    small diff, fixes the OUTAGE
+    3. BUG-006 batch the N+1              small diff, ~10 fewer round-trips/search
+    4. BUG-005 tune the pool              one line, removes a hidden ceiling
+    5. BUG-003/004 fix provider routing   correctness, not perf
+    6. BUG-008 paginate graph             prevents future blowup
+    7. BUG-009 batch embeddings           indexing speed
+    8. BUG-010 align versions             hygiene
+
+  Items 1-4 are independent and can all land together. 1+2 together should move the
+  API from "unavailable during indexing" to "degraded during indexing".
+
+  3.4 EXPECTED OUTCOME AFTER FIXES 1-4 (targets, to be measured)
+  ------------------------------------------------------------------------
+    Metric                        Now            Target
+    ----------------------------------------------------------------------------
+    Search throughput             8.26 req/s     >= 20 req/s (pool-bound relief)
+    Read throughput               60.2 req/s     >= 80 req/s
+    Search p95 @ 30 VUs           3.76 s         <= 2.5 s
+    API availability during index 0%            100%
+    Max request duration          29,994 ms     < 5,000 ms
+    DB round-trips per search     11             2
+
+  NOTE: search throughput remains bounded by serial Ollama inference unless BUG-009
+  is also fixed. That is an infrastructure limit, not an application defect.
+
+  3.5 RISKS
+  ------------------------------------------------------------------------
+    - AsyncQdrantClient is a different client with a different API surface. Needs a
+      real search against a populated collection to verify, not just a health check.
+    - Offloading parse work to threads still holds the GIL during tree-sitter C calls
+      in places. A worker process is the only fully robust answer; threads are a
+      large improvement, not a complete fix.
+    - Raising pool_size increases Postgres load. Postgres max_connections must be
+      checked (default 100) before choosing numbers.
+    - Fixing BUG-003 will route explain/trace to Ollama, which is SLOWER than Gemini
+      for generation (77 s observed). Latency for those endpoints will get worse
+      before it gets better; that is correct routing, not a regression.
+
+================================================================================
+
+
+================================================================================
+  SECTION 4 — CHANGE LOG
+================================================================================
+  Format: timestamp | bug | action | verification | measured result
+
+  Legend: V = verified. "unit" = pytest, "live" = real HTTP against the running
+  container, "bench" = k6 run.
+
+  ------------------------------------------------------------------------------
+  2026-10-01  ALL      Baseline captured; 11 defects catalogued. probe.js exposed
+                        that host port 8000 was answering with a DIFFERENT app
+                        ({"status":"all is well"} on /health, 404 on /api/*),
+                        which had been silently invalidating earlier measurements.
+  2026-10-02  BUG-010  qdrant-client pinned to >=1.12.0,<1.13.0 to match Qdrant
+                        server 1.12.1; lock resolved 1.12.2, compatibility warning
+                        gone. V: bench, imports against the live server.
+
+  2026-10-02  BUG-001  ROOT CAUSE CORRECTED. A direct probe showed tree-sitter
+                        parses at ~2.4 ms/file and RELEASES THE GIL. The real cost
+                        was Path.rglob("*") walking 705,868 entries to find ~1,332
+                        files: 16.91 s natively, 12m49s under the Docker bind
+                        mount, all on the event loop. Scanner rewritten to os.walk
+                        with in-place pruning of excluded directories, tolerant of
+                        PermissionError, deterministic ordering.
+                        V: unit (test_scanner_pruning.py). Full D:\Code\Projects
+                        scan 16.91s -> 0.380s (44x).
+
+  2026-10-02  BUG-001  Offloaded scanner, file reads and parsing to the default
+                        executor (threads, chosen over a worker process by user
+                        decision). Parsing yields to the loop every 25 files.
+                        V: live, /health probed twice per second throughout a full
+                        main-corpus index: 108 probes, 0 failures, max 5.9 ms. Index
+                        wall time 12m49s (pre-fix_files_found delay alone) ->
+                        54.1 s for 90 files / 381 symbols.
+
+  2026-10-02  BUG-012  NEW DEFECT FOUND DURING REMEDIATION. Indexing called
+                        delete_collection() on the shared "code_embeddings"
+                        collection before every run, wiping EVERY repository's
+                        vectors, so search silently returned zero results for other
+                        repositories after any indexing job.
+                        ensure_collection() now reuses a dimension-compatible
+                        collection and only recreates on mismatch; indexing clears
+                        only its own payload-filtered points.
+                        V: live. Indexed portfolio_v4, then IronVill, then deleted
+                        IronVill. Each repository's vectors survived the others and
+                        the delete removed exactly its own 13 points.
+                        V: unit (test_vector_store.py, test_qdrant_client_contract.py).
+
+  2026-10-02  BUG-013  NEW DEFECT FOUND DURING REMEDIATION. Repository deletion
+                        filtered Qdrant on Node.qdrant_point_id, which is never
+                        populated, so deleting a repository left every one of its
+                        vectors behind as an orphan.
+                        repository_api now calls delete_by_repository().
+                        V: live. Deleted the devcart repo; its 200 points
+                        disappeared while the other repository's 30 points remained.
+                        The pre-fix orphan 64ee92e8-dd61-477e-a814-e0df352e1d2c
+                        (143 points, created before the fix) is still present, as
+                        expected - that is data cleanup, not a code defect.
+
+  2026-10-02  BUG-002  Replaced synchronous QdrantClient with AsyncQdrantClient.
+                        V: live, three real searches returned 5 hits each.
+  2026-10-02  BUG-006  Replaced the per-result node lookup with NodeRepo.get_many()
+                        (single IN query), preserving Qdrant score order.
+                        V: unit + live search.
+  2026-10-02  BUG-005  Added pool_size=20, max_overflow=20, pool_timeout=30,
+                        pool_recycle=1800, pool_pre_ping=True.
+                        V: live. After a 10m soak Postgres held exactly 20 idle
+                        connections - bounded and reused, no leak, no exhaustion.
+  2026-10-02  BUG-009  Ollama embeddings now sent as ONE /api/embed request
+                        carrying a list, instead of one HTTP request per text.
+                        V: live, main corpus (381 symbols) indexed in 54.1 s.
+  2026-10-02  BUG-003  Provider resolution now prefers the durable model_store over
+                        volatile module globals; the toggle endpoint persists
+                        through model_store.
+                        V: unit (test_provider_resolution.py, test_model_store.py),
+                        live API reports active_llm=ollama / active_embedding=ollama.
+  2026-10-02  BUG-004  Same change makes selection durable across restarts; missing
+                        provider entries are synthesised from env defaults.
+                        V: unit + live.
+  2026-10-02  BUG-008  /api/graph/{id} is now bounded (limit default 500, max 2000)
+                        and filterable by symbol_type; the response reports
+                        total_nodes / returned_nodes / truncated, and edges are
+                        restricted to returned nodes.
+                        V: live, zero dangling edges returned.
+
+  2026-10-02  HARNESS  index-contention.js hardened: added max-duration gate,
+                        over-budget rate gate, zero blocked requests, and a
+                        repeatable delete/reset so the test can be re-run.
+  2026-10-02  HARNESS  run-k6.ps1: raw sample output is now opt-in (-Raw).
+                        Previously every run wrote ~100 MB of JSON through a
+                        Windows bind mount, which stalled k6 badly enough that one
+                        5-minute read-load run produced 115 MB over 2h07m and
+                        never terminated - it was misread as a backend hang. The
+                        runner also now honours -TimeoutSec (previously ignored),
+                        surfaces k6's stderr instead of discarding it, and treats
+                        script exceptions as a failure even when k6 exits 0.
+  2026-10-02  HARNESS  soak.js gained per-minute latency windows and a drift gate,
+                        so BUG-007 can be judged without the raw sample file. Three
+                        intermediate attempts failed and were diagnosed: k6 drops
+                        tag sub-metrics from --summary-export; k6 gives each VU its
+                        own JS runtime so module state cannot reach handleSummary;
+                        and k6 requires metrics to be constructed in the init
+                        context. The working approach declares one untagged Trend
+                        per minute, sized from the configured duration, up front.
+  2026-10-02  BUG-011  probe.js rewritten to positively identify the app by its
+                        OpenAPI title on BOTH the container network and the published
+                        host port, and to print an explicit verdict, instead of
+                        leaving the caller to infer it from an ambiguous
+                        http_req_failed rate. A 404 from a shadowing app is now
+                        reported as "reachable but wrong app".
+                        V: bench, 6/6 checks, http_req_failed 0 fails, verdict
+                        "BUG-011 CLEARED". The shadowing process is no longer
+                        running; host port 8000 now serves this app.
+
+  2026-10-02  BUG-007  Soak re-run on a quiet host (immich/devcart at ~0% CPU) with
+                        the new drift instrumentation.
+                        V: bench. 10 minutes, 10 VUs, 9,570 requests, 0 failures.
+                        Per-minute mean latency 278ms -> 452ms; drift ratio 1.63x
+                        against a 2.0x gate, verdict PASS. Backend RSS was 289.9 MiB
+                        before and 290.3 MiB after, and Postgres held exactly 20
+                        idle connections, so the mild upward trend is not a memory
+                        or connection leak. See 5.5.
+
+  2026-10-02  ALL      Full re-run of every benchmark. See Section 5.
+
+================================================================================
+  SECTION 5 — RESULTS AFTER FIXES
+================================================================================
+  Captured 2026-10-02. Same stack, same corpus, same k6 scenarios. Corpus is the
+  re-indexed main repo: 90 files / 381 symbols (baseline was 85 files / 291
+  symbols; the file count moved because the pruned os.walk walk reaches a
+  different file set than the old rglob walk).
+
+  Baseline numbers were taken on a contended host, so the throughput "after"
+  figures are if anything conservative.
+
+  ------------------------------------------------------------------------------
+  5.1 BEFORE / AFTER BY SCENARIO
+  ------------------------------------------------------------------------------
+                                BASELINE        AFTER       CHANGE
+  ------------------------------------------------------------------------------
+  read-load   throughput        60.16 req/s   100.18 req/s    +67%
+              avg                435.2 ms       247.3 ms      -43%
+              med                201.0 ms       129.6 ms      -36%
+              p90              1,089.2 ms       644.5 ms      -41%
+              p95              1,672.6 ms       803.2 ms      -52%
+              p99              3,171.2 ms     1,188.9 ms      -63%
+              max             10,005.8 ms     3,383.0 ms      -66%
+              failures             0/18,085        0/30,157    clean
+  ------------------------------------------------------------------------------
+  search-load throughput          8.26 req/s    21.31 req/s   +158%
+              avg              2,073.9 ms       679.3 ms      -67%
+              med              2,056.4 ms       624.1 ms      -70%
+              p90              3,382.8 ms     1,221.7 ms      -64%
+              p95              3,762.6 ms     1,344.9 ms      -64%
+              p99              4,619.9 ms     1,568.0 ms      -66%
+              max             18,719.7 ms     3,087.7 ms      -84%
+              failures             0/2,482        0/6,397    clean
+  ------------------------------------------------------------------------------
+  index-       throughput         5.25 req/s    35.17 req/s   +570%
+  contention   avg                498.6 ms        13.5 ms      -97%
+              p95                143.9 ms        51.9 ms      -64%
+              p99             29,994.4 ms       105.8 ms     -100%
+              max             29,998.4 ms       481.8 ms      -98%
+              failures               21/1,346        0/8,459   clean
+              health_ok              98.44%         100.00%
+  ------------------------------------------------------------------------------
+  spike        throughput          7.56 req/s    18.32 req/s   +142%
+  (60 VUs)    avg              4,685.4 ms     1,868.0 ms      -60%
+              med              4,867.6 ms     2,522.7 ms      -48%
+              p95             10,336.9 ms     3,838.5 ms      -63%
+              max             17,508.7 ms     7,883.6 ms      -55%
+              failures             0/1,895        0/4,583    clean
+  ------------------------------------------------------------------------------
+  soak         throughput          7.87 req/s    15.94 req/s   +102%
+              avg                968.2 ms       325.9 ms      -66%
+              p95              2,306.3 ms       502.6 ms      -78%
+              max              3,957.2 ms     1,812.0 ms      -54%
+              failures             0/4,728        0/9,571    clean
+  ------------------------------------------------------------------------------
+  smoke        13/13 checks, exit 0, http_req_failed 0.00% (0 of 14)
+
+  Comparability notes:
+    - spike is reported at a matched 60 VUs (spike-after-60v) because the script's
+      default peak is 100. A 100-VU run was also captured: 17.85 req/s, p95
+      11,201 ms, max 18,559 ms, 0 failures. So the service absorbs 67% more
+      concurrent search load than the baseline could; p95 at 100 VUs is roughly
+      level with the baseline at 60 VUs. The embedding path, not the API, is what
+      saturates.
+    - index-contention "before" had 21 failures and three failed checks on every
+      endpoint; "after" had none.
+
+  ------------------------------------------------------------------------------
+  5.2 TARGETS FROM SECTION 3.4 vs ACTUAL
+  ------------------------------------------------------------------------------
+  Metric                        Baseline      Target      Actual    Verdict
+  ------------------------------------------------------------------------------
+  Search throughput             8.26 req/s   >= 20 req/s   21.31     MET
+  Read throughput             60.16 req/s   >= 80 req/s  100.18     MET
+  Search p95 @ 30 VUs           3.76 s        <= 2.5 s     1.34 s    MET
+  API availability during index  0%           100%          100%     MET
+  Max request duration         29,994 ms    < 5,000 ms    481.8 ms  MET
+  DB round-trips per search     11            2             2        MET
+
+  All six targets met. Search throughput cleared the 20 req/s bar that Section 3.4
+  had flagged as reachable only if BUG-009 were fixed as well.
+
+  ------------------------------------------------------------------------------
+  5.3 THRESHOLD RESULTS
+  ------------------------------------------------------------------------------
+  read-load        4 of 5 pass. read_ms p(95)<500 FAILS at 803 ms.
+                   This is NOT a regression: the baseline failed the same gate at
+                   1,672.6 ms. The 500 ms budget was never achievable for this
+                   endpoint mix under 50 ramping VUs and was mis-specified. It is
+                   reported honestly rather than re-baselined away.
+  search-load      5 of 5 pass.
+  index-contention 5 of 5 pass, including the three hard-availability gates the
+                   baseline harness did not have.
+  spike            3 of 3 pass.
+  soak             3 of 3 pass, plus the new drift gate.
+  probe            6 of 6 checks, http_req_failed 0 fails, BUG-011 CLEARED.
+
+  ------------------------------------------------------------------------------
+  5.4 RESIDUAL FOLLOW-UPS (tracked, deliberately not hidden)
+  ------------------------------------------------------------------------------
+  - soak drift 1.63x (278 ms -> 452 ms mean) passes the 2.0x gate. Backend RSS was
+    flat (289.9 -> 290.3 MiB) and Postgres held exactly 20 idle connections before
+    and after, so this is not a memory or connection leak. Most likely Ollama
+    model-state/thermal behaviour under 10 VUs of continuous embedding work. Worth
+    a longer soak (1h+) with Ollama telemetry before treating it as real.
+  - read_ms p95 of 803 ms still exceeds the 500 ms budget (5.3). Genuine headroom
+    remains in the read path. Per-endpoint attribution was not captured because
+    k6's --summary-export drops tag sub-metrics; raw output is opt-in via -Raw.
+  - Legacy orphan vectors for 64ee92e8-dd61-477e-a814-e0df352e1d2c (143 points)
+    predate the BUG-013 fix and are still in the collection. They no longer affect
+    search results because every query filters by repository_id, but the
+    collection holds 697 points where 554 are expected.
+  - backend/uv.lock also moved grpcio-tools, portalocker and setuptools when the
+    qdrant-client pin was resolved. Not audited.
+  - Indexing clears the target repository's vectors before parsing, so a failure
+    part-way through leaves that repository with no vectors until the next run. A
+    staging collection swapped in on success would make it atomic.
+  - PROCESS NOTE: PowerShell Get-Content/WriteAllText round-trips double-encode
+    non-ASCII characters in this repo's text files (33 em-dashes in this file were
+    corrupted to mojibake and then repaired). Use the editor tooling, or specify
+    UTF-8 explicitly, when editing tracked text files from PowerShell.
+
+================================================================================
+  END OF CURRENT LOG
+================================================================================

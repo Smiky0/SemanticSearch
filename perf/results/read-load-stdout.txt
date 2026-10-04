@@ -1,0 +1,55 @@
+time="2026-09-29T17:05:32Z" level=info msg="read load -> repository 4963c4d4-507e-4f05-9a92-f52847c56b7f" source=console
+
+
+  Ôûê THRESHOLDS 
+
+    blocked_requests
+    Ô£ô 'count==0' count=0
+
+    http_req_failed
+    Ô£ô 'rate<0.01' rate=0.00%
+
+    read_ms
+    Ô£ù 'p(95)<500' p(95)=1.67s
+
+    read_success
+    Ô£ô 'rate>0.99' rate=100.00%
+
+
+  Ôûê TOTAL RESULTS 
+
+    checks_total.......: 18084   60.156812/s
+    checks_succeeded...: 100.00% 18084 out of 18084
+    checks_failed......: 0.00%   0 out of 18084
+
+    Ô£ô GET /health: 200
+    Ô£ô GET /api/repositories: 200
+    Ô£ô GET /api/repositories/{id}/status: 200
+    Ô£ô GET /api/models: 200
+    Ô£ô GET /api/repositories/browse: 200
+    Ô£ô GET /api/graph/{id}: 200
+
+    CUSTOM
+    blocked_requests...............: 0       0/s
+    read_ms........................: avg=435.21ms min=2.83ms   med=200.97ms p(90)=1.08s p(95)=1.67s p(99)=3.17s max=10s   
+    read_success...................: 100.00% 18084 out of 18084
+
+    HTTP
+    http_req_duration..............: avg=435.2ms  min=2.83ms   med=200.96ms p(90)=1.08s p(95)=1.67s p(99)=3.17s max=10s   
+      { expected_response:true }...: avg=435.2ms  min=2.83ms   med=200.96ms p(90)=1.08s p(95)=1.67s p(99)=3.17s max=10s   
+    http_req_failed................: 0.00%   0 out of 18085
+    http_reqs......................: 18085   60.160138/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.81s    min=430.18ms med=2.41s    p(90)=4.76s p(95)=5.88s p(99)=8.69s max=12.58s
+    iterations.....................: 3014    10.026135/s
+    vus............................: 11      min=1              max=50
+    vus_max........................: 50      min=50             max=50
+
+    NETWORK
+    data_received..................: 178 MB  593 kB/s
+    data_sent......................: 2.0 MB  6.7 kB/s
+
+
+
+time="2026-09-29T17:10:33Z" level=error msg="thresholds on metrics 'read_ms' have been crossed"

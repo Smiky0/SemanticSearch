@@ -1,0 +1,53 @@
+
+
+  █ THRESHOLDS 
+
+    blocked_requests
+    ✓ 'count==0' count=0
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    read_ms
+    ✗ 'p(95)<500' p(95)=803.17ms
+
+    read_success
+    ✓ 'rate>0.99' rate=100.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 30156   100.171986/s
+    checks_succeeded...: 100.00% 30156 out of 30156
+    checks_failed......: 0.00%   0 out of 30156
+
+    ✓ GET /health: 200
+    ✓ GET /api/repositories: 200
+    ✓ GET /api/repositories/{id}/status: 200
+    ✓ GET /api/models: 200
+    ✓ GET /api/repositories/browse: 200
+    ✓ GET /api/graph/{id}: 200
+
+    CUSTOM
+    blocked_requests...............: 0       0/s
+    read_ms........................: avg=247.3ms min=595.27µs med=129.56ms p(90)=644.53ms p(95)=803.17ms p(99)=1.18s max=3.38s
+    read_success...................: 100.00% 30156 out of 30156
+
+    HTTP
+    http_req_duration..............: avg=247.3ms min=595.27µs med=129.55ms p(90)=644.51ms p(95)=803.15ms p(99)=1.18s max=3.38s
+      { expected_response:true }...: avg=247.3ms min=595.27µs med=129.55ms p(90)=644.51ms p(95)=803.15ms p(99)=1.18s max=3.38s
+    http_req_failed................: 0.00%   0 out of 30157
+    http_reqs......................: 30157   100.175308/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.68s   min=248.49ms med=1.65s    p(90)=2.75s    p(95)=3.08s    p(99)=4.46s max=5.96s
+    iterations.....................: 5026    16.695331/s
+    vus............................: 3       min=1              max=50
+    vus_max........................: 50      min=50             max=50
+
+    NETWORK
+    data_received..................: 377 MB  1.3 MB/s
+    data_sent......................: 3.0 MB  9.8 kB/s
+
+
+

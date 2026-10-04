@@ -1,0 +1,204 @@
+{
+    "root_group": {
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "GET /health: 200": {
+                    "name": "GET /health: 200",
+                    "path": "::GET /health: 200",
+                    "id": "3c53818a44af464da86f83629bcc5a05",
+                    "passes": 5026,
+                    "fails": 0
+                },
+                "GET /api/repositories: 200": {
+                    "name": "GET /api/repositories: 200",
+                    "path": "::GET /api/repositories: 200",
+                    "id": "94c33a1685918fcd2e36fa34dae2d2a8",
+                    "passes": 5026,
+                    "fails": 0
+                },
+                "GET /api/repositories/{id}/status: 200": {
+                    "name": "GET /api/repositories/{id}/status: 200",
+                    "path": "::GET /api/repositories/{id}/status: 200",
+                    "id": "5fb5b69b0b6614abbbde37d12a2e112e",
+                    "passes": 5026,
+                    "fails": 0
+                },
+                "GET /api/models: 200": {
+                    "passes": 5026,
+                    "fails": 0,
+                    "name": "GET /api/models: 200",
+                    "path": "::GET /api/models: 200",
+                    "id": "1bfad812fe6ca56994d20c641807a1af"
+                },
+                "GET /api/repositories/browse: 200": {
+                    "name": "GET /api/repositories/browse: 200",
+                    "path": "::GET /api/repositories/browse: 200",
+                    "id": "df1b6be49becca0e5022bc6493ffc8d8",
+                    "passes": 5026,
+                    "fails": 0
+                },
+                "GET /api/graph/{id}: 200": {
+                    "name": "GET /api/graph/{id}: 200",
+                    "path": "::GET /api/graph/{id}: 200",
+                    "id": "5baf14146e08191f3f654ea52be6c5d6",
+                    "passes": 5026,
+                    "fails": 0
+                }
+            },
+        "name": ""
+    },
+    "metrics": {
+        "iterations": {
+            "count": 5026,
+            "rate": 16.695331059829375
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 30157,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_duration": {
+            "avg": 247.30099279540445,
+            "min": 0.595272,
+            "med": 129.555655,
+            "p(90)": 644.5188618000002,
+            "p(95)": 803.1571275999992,
+            "p(99)": 1188.8669563599972,
+            "max": 3382.960914
+        },
+        "read_ms": {
+            "p(95)": 803.1706475,
+            "p(99)": 1188.8879508000016,
+            "max": 3382.960914,
+            "avg": 247.30727557186003,
+            "min": 0.595272,
+            "med": 129.5662615,
+            "p(90)": 644.5377914999999,
+            "thresholds": {
+                "p(95)<500": true
+            }
+        },
+        "http_req_receiving": {
+            "max": 10.459239,
+            "avg": 0.10425786944987855,
+            "min": 0.015501,
+            "med": 0.072404,
+            "p(90)": 0.2139094,
+            "p(95)": 0.2594753999999999,
+            "p(99)": 0.3851994799999995
+        },
+        "data_sent": {
+            "count": 2960398,
+            "rate": 9833.829024842174
+        },
+        "read_success": {
+            "passes": 30156,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "blocked_requests": {
+            "count": 0,
+            "rate": 0,
+            "thresholds": {
+                "count==0": false
+            }
+        },
+        "http_reqs": {
+            "count": 30157,
+            "rate": 100.1753081518652
+        },
+        "http_req_waiting": {
+            "avg": 247.1763994895388,
+            "min": 0.499177,
+            "med": 129.45655,
+            "p(90)": 644.3323920000001,
+            "p(95)": 803.1182985999993,
+            "p(99)": 1188.7000957599969,
+            "max": 3382.557201
+        },
+        "data_received": {
+            "count": 376714747,
+            "rate": 1251368.3677447005
+        },
+        "iteration_duration": {
+            "p(99)": 4468.51904825,
+            "max": 5966.791661,
+            "avg": 1685.8588570193003,
+            "min": 248.496938,
+            "med": 1652.5736185,
+            "p(90)": 2752.5452915,
+            "p(95)": 3087.91006375
+        },
+        "http_req_blocked": {
+            "min": 0.0014,
+            "med": 0.004501,
+            "p(90)": 0.0078,
+            "p(95)": 0.0095,
+            "p(99)": 0.01774499999999987,
+            "max": 4.087807,
+            "avg": 0.006239842424644333
+        },
+        "http_req_duration{expected_response:true}": {
+            "max": 3382.960914,
+            "avg": 247.30099279540445,
+            "min": 0.595272,
+            "med": 129.555655,
+            "p(90)": 644.5188618000002,
+            "p(95)": 803.1571275999992,
+            "p(99)": 1188.8669563599972
+        },
+        "http_req_sending": {
+            "max": 2.250102,
+            "avg": 0.020335436416089293,
+            "min": 0.004501,
+            "med": 0.013101,
+            "p(90)": 0.043801400000000004,
+            "p(95)": 0.0525022,
+            "p(99)": 0.07885395999999986
+        },
+        "checks": {
+            "passes": 30156,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_tls_handshaking": {
+            "max": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0
+        },
+        "http_req_connecting": {
+            "med": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "max": 1.217278,
+            "avg": 0.0005266913817687437,
+            "min": 0
+        },
+        "vus": {
+            "value": 3,
+            "min": 1,
+            "max": 50
+        },
+        "vus_max": {
+            "value": 50,
+            "min": 50,
+            "max": 50
+        }
+    },
+    "setup_data": {
+        "repoId": "fa61d2e0-8914-4181-9adf-414ddb992d8b"
+    }
+}

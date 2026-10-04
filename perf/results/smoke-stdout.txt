@@ -1,0 +1,66 @@
+time="2026-09-29T16:57:31Z" level=info msg="ok   GET /health status=200 dur=4.2ms" source=console
+time="2026-09-29T16:57:31Z" level=info msg="ok   GET /api/repositories status=200 dur=9.1ms" source=console
+time="2026-09-29T16:57:32Z" level=info msg="ok   GET /api/repositories/browse status=200 dur=59.8ms" source=console
+time="2026-09-29T16:57:32Z" level=info msg="ok   GET /api/config/providers status=200 dur=32.5ms" source=console
+time="2026-09-29T16:57:32Z" level=info msg="ok   GET /api/models status=200 dur=6.1ms" source=console
+time="2026-09-29T16:57:32Z" level=info msg="using repository 4963c4d4-507e-4f05-9a92-f52847c56b7f" source=console
+time="2026-09-29T16:57:32Z" level=info msg="ok   GET /api/repositories/{id}/status status=200 dur=11.0ms" source=console
+time="2026-09-29T16:57:32Z" level=info msg="ok   GET /api/graph/{id} status=200 dur=41.5ms" source=console
+time="2026-09-29T16:57:32Z" level=info msg="ok   GET /api/symbols/{id} status=200 dur=8.2ms" source=console
+time="2026-09-29T16:57:32Z" level=info msg="ok   GET /api/symbols/{id}/relationships status=200 dur=14.4ms" source=console
+time="2026-09-29T16:57:32Z" level=info msg="ok   POST /api/search status=200 dur=383.7ms" source=console
+time="2026-09-29T16:58:49Z" level=info msg="ok   POST /api/explain status=200 dur=77055ms" source=console
+time="2026-09-29T16:59:09Z" level=info msg="ok   POST /api/trace status=200 dur=19705ms" source=console
+time="2026-09-29T16:59:09Z" level=info msg="ok   GET / status=200" source=console
+
+
+  Ôûê THRESHOLDS 
+
+    http_req_failed
+    Ô£ô 'rate==0' rate=0.00%
+
+    smoke_failures
+    Ô£ô 'count==0' count=0
+
+
+  Ôûê TOTAL RESULTS 
+
+    checks_total.......: 13      0.132837/s
+    checks_succeeded...: 100.00% 13 out of 13
+    checks_failed......: 0.00%   0 out of 13
+
+    Ô£ô GET /health -> 200
+    Ô£ô GET /api/repositories -> 200
+    Ô£ô GET /api/repositories/browse -> 200
+    Ô£ô GET /api/config/providers -> 200
+    Ô£ô GET /api/models -> 200
+    Ô£ô GET /api/repositories/{id}/status -> 200
+    Ô£ô GET /api/graph/{id} -> 200
+    Ô£ô GET /api/symbols/{id} -> 200
+    Ô£ô GET /api/symbols/{id}/relationships -> 200
+    Ô£ô POST /api/search -> 200
+    Ô£ô POST /api/explain -> 200
+    Ô£ô POST /api/trace -> 200
+    Ô£ô GET / (nginx) -> 200
+
+    CUSTOM
+    smoke_failures.................: 0      0/s
+
+    HTTP
+    http_req_duration..............: avg=6.95s min=2.19ms med=12.67ms max=1m17s p(90)=13.9s p(95)=39.77s
+      { expected_response:true }...: avg=6.95s min=2.19ms med=12.67ms max=1m17s p(90)=13.9s p(95)=39.77s
+    http_req_failed................: 0.00%  0 out of 14
+    http_reqs......................: 14     0.143055/s
+
+    EXECUTION
+    iteration_duration.............: avg=1m37s min=1m37s  med=1m37s   max=1m37s p(90)=1m37s p(95)=1m37s 
+    iterations.....................: 1      0.010218/s
+    vus............................: 1      min=1       max=1
+    vus_max........................: 1      min=1       max=1
+
+    NETWORK
+    data_received..................: 74 kB  755 B/s
+    data_sent......................: 2.0 kB 20 B/s
+
+
+
